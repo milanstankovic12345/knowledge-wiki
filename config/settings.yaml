@@ -1,0 +1,34 @@
+paths:
+  raw: raw
+  processed: processed
+  wiki: wiki
+  inbox: inbox
+  database: data/state.db
+
+limits:
+  max_download_mb: 50
+  max_redirects: 3
+  url_timeout_seconds: 20
+  max_retries: 3
+
+allowed_extensions:
+  document: [.pdf, .epub, .docx, .md, .txt, .html]
+  image: [.jpg, .jpeg, .png, .webp]
+  audio: [.mp3, .wav, .m4a, .ogg, .oga]
+  video: [.mp4, .mov, .mkv, .webm, .avi]
+
+models:
+  context_chars: 24000   # chunk size sent to the text model
+  keep_alive: 30s        # unload quickly on 8 GB VRAM
+
+transcription:
+  model: small
+  device: cuda
+  compute_type: int8_float16
+
+video:
+  frame_interval_seconds: 60
+
+youtube:
+  subtitle_langs: ["en.*", "sl.*", "sr.*"]
+  allow_audio_download: false   # set true only for media you may process

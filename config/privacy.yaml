@@ -1,0 +1,37 @@
+default_classification: private
+
+classifications:
+  public:
+    allow_cloud: true
+
+  personal:
+    allow_cloud: false
+
+  confidential:
+    allow_cloud: false
+
+  restricted:
+    allow_cloud: false
+
+source_defaults:
+  article: public
+  youtube: public
+  instagram: personal
+  book: personal
+  pc_video: personal
+  telegram_text: personal
+  telegram_voice: personal
+  telegram_photo: personal
+
+cloud_requires_explicit_approval:
+  - book
+  - instagram
+  - pc_video
+  - telegram_voice
+  - telegram_photo
+
+local_only_paths:
+  - raw/books
+  - raw/photos
+  - raw/videos
+  - raw/telegram
