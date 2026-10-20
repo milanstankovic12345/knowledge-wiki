@@ -104,3 +104,15 @@ This file is append-only.
 - Reason: clip "Building RAG Systems From Zero to Hero 1.md" carried a Devpost URL and a malformed creator, and its raw file no longer exists. Its source page, processed document, four topic pages and index entries were removed; the 13:25 ingest entry above is retained as history.
 - Pages updated: ["wiki/topics/iterative-development.md", "index.md"]
 - Human review: approved
+
+## [2026-10-20 17:52] ingest | I made Claude Code build a map of my files, and it cut search times by 96%
+
+- Source type: article
+- Raw path: raw/articles/i-made-claude-code-build-a-map-of-my-files-and-it-cut-search-4608af51.md
+- Content hash: abf4d3fc1cf883f29b2b6be0d226a235a61939f70691968743c3837e78c94daa
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/i-made-claude-code-build-a-map-of-my-files-and-it-cut-search.md", "wiki/topics/digital-organization.md", "wiki/topics/file-search-efficiency.md", "wiki/topics/readme-files.md", "wiki/topics/personal-knowledge-base.md", "wiki/topics/claude-code.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending

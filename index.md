@@ -37,6 +37,11 @@
 - [[topics/let-s-encrypt-ssl]] - Let's Encrypt SSL
 - [[topics/oauth-authentication]] - OAuth authentication
 - [[topics/containerization]] - Containerization
+- [[topics/digital-organization]] - Digital organization
+- [[topics/file-search-efficiency]] - File search efficiency
+- [[topics/readme-files]] - README files
+- [[topics/personal-knowledge-base]] - Personal knowledge base
+- [[topics/claude-code]] - Claude Code
 
 ## People
 
@@ -59,6 +64,7 @@
 - [[sources/building-rag-systems-from-zero-to-hero]] - Building RAG Systems: From Zero to Hero
 - [[sources/an-app-built-for-one-why-a-devpost-skill-pack-made-me-spec-i]] - An App Built for One: Why a Devpost Skill Pack Made Me Spec It Anyway
 - [[sources/running-n8n-for-free-on-aws-a-self-hosting-guide-for-n8n-lov]] - Running n8n for Free on AWS: A Self-Hosting Guide for n8n Lovers.
+- [[sources/i-made-claude-code-build-a-map-of-my-files-and-it-cut-search]] - I made Claude Code build a map of my files, and it cut search times by 96%
 
 ## Concepts
 
@@ -70,7 +76,7 @@
 
 ## Wiki health
 
-- Last ingest: 2026-10-20T13:59:39+02:00
+- Last ingest: 2026-10-20T17:52:05+02:00
 - Last lint:
 - Sources awaiting processing:
 - Failed sources:
