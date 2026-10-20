@@ -86,3 +86,21 @@ This file is append-only.
 - Pages updated: ["wiki/topics/iterative-development.md", "index.md"]
 - Contradictions: none recorded
 - Human review: pending
+
+## [2026-10-20 13:59] ingest | Running n8n for Free on AWS: A Self-Hosting Guide for n8n Lovers.
+
+- Source type: article
+- Raw path: raw/articles/Running n8n for Free on AWS A Self-Hosting Guide for n8n Lovers..md
+- Content hash: bf3171bdf725f3dde0ce9747c01780c38c30b195d657366b10cbc4efc66f20af
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/running-n8n-for-free-on-aws-a-self-hosting-guide-for-n8n-lov.md", "wiki/topics/docker-compose.md", "wiki/topics/nginx-reverse-proxy.md", "wiki/topics/let-s-encrypt-ssl.md", "wiki/topics/oauth-authentication.md", "wiki/topics/containerization.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-20 14:10] correction | removed garbled source 8ca97217
+
+- Reason: clip "Building RAG Systems From Zero to Hero 1.md" carried a Devpost URL and a malformed creator, and its raw file no longer exists. Its source page, processed document, four topic pages and index entries were removed; the 13:25 ingest entry above is retained as history.
+- Pages updated: ["wiki/topics/iterative-development.md", "index.md"]
+- Human review: approved

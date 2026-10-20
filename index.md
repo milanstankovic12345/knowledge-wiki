@@ -32,10 +32,11 @@
 - [[topics/iterative-development]] - Iterative development
 - [[topics/custom-builds]] - Custom builds
 - [[topics/scalable-tools]] - Scalable tools
-- [[topics/user-centric-design]] - User-centric design
-- [[topics/user-feedback]] - User feedback
-- [[topics/continuous-improvement]] - Continuous improvement
-- [[topics/customization-vs-scalability]] - Customization vs. scalability
+- [[topics/docker-compose]] - Docker Compose
+- [[topics/nginx-reverse-proxy]] - NGINX reverse proxy
+- [[topics/let-s-encrypt-ssl]] - Let's Encrypt SSL
+- [[topics/oauth-authentication]] - OAuth authentication
+- [[topics/containerization]] - Containerization
 
 ## People
 
@@ -55,7 +56,7 @@
 - [[sources/why-personal-knowledge-management-compounds]] - Why Personal Knowledge Management Compounds
 - [[sources/building-rag-systems-from-zero-to-hero]] - Building RAG Systems: From Zero to Hero
 - [[sources/an-app-built-for-one-why-a-devpost-skill-pack-made-me-spec-i]] - An App Built for One: Why a Devpost Skill Pack Made Me Spec It Anyway
-- [[sources/building-rag-systems-from-zero-to-hero-8ca97217]] - Building RAG Systems: From Zero to Hero
+- [[sources/running-n8n-for-free-on-aws-a-self-hosting-guide-for-n8n-lov]] - Running n8n for Free on AWS: A Self-Hosting Guide for n8n Lovers.
 
 ## Concepts
 
@@ -67,7 +68,7 @@
 
 ## Wiki health
 
-- Last ingest: 2026-10-20T13:25:02+02:00
+- Last ingest: 2026-10-20T13:59:39+02:00
 - Last lint:
 - Sources awaiting processing:
 - Failed sources:
