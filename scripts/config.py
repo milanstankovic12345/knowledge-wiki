@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,6 +22,14 @@ class ProviderSettings(BaseSettings):
     ollama_local_url: str = "http://127.0.0.1:11434"
     ollama_local_text_model: str = "qwen3:8b"
     ollama_local_vision_model: str = "qwen3-vl:8b"
+    telegram_bot_token: SecretStr = SecretStr("")
+    telegram_allowed_user_ids: str = ""
+
+    @property
+    def allowed_user_ids(self) -> frozenset[int]:
+        """Telegram user ids allowed to use the bot. Empty or malformed entries are ignored."""
+        ids = (p.strip() for p in self.telegram_allowed_user_ids.split(","))
+        return frozenset(int(p) for p in ids if p.lstrip("-").isdigit())
 
 
 @dataclass

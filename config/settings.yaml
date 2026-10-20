@@ -30,6 +30,12 @@ video:
   frame_interval_seconds: 60
   max_frames: 40   # longer videos widen the interval
 
+telegram:
+  media_group_wait_seconds: 2   # wait for the rest of an album before ingesting it
+  max_file_mb: 20               # Bot API download limit; larger files use /ingest-local
+  reply_max_chars: 3500
+  search_results: 5
+
 youtube:
   subtitle_langs: ["en.*", "sl.*", "sr.*"]
   allow_audio_download: false   # set true only for media you may process

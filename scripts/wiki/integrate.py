@@ -35,7 +35,12 @@ def _review(review: list[str] | None, doc: SourceDoc) -> str:
         if doc.page_count
         else []
     )
-    if doc.media_kind:
+    if doc.media_kind == "image":
+        lines.append(
+            f"- {len(doc.frames)} image(s) described locally by a vision model from metadata-free "
+            "copies; descriptions can be wrong, and no people are identified."
+        )
+    elif doc.media_kind:
         lines.append(
             f"- Transcribed locally with faster-whisper `{doc.extraction_model}` "
             f"(language: {doc.language or 'unknown'}, duration: {fmt_time(doc.duration_seconds)}); "

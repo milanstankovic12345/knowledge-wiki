@@ -22,8 +22,11 @@ source_defaults:
   telegram_text: personal
   telegram_voice: personal
   telegram_photo: personal
+  telegram_document: personal
 
 cloud_requires_explicit_approval:
+  - telegram_text
+  - telegram_document
   - book
   - instagram
   - pc_video

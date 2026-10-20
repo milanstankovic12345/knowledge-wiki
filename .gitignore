@@ -41,3 +41,10 @@ raw/**/*.pdf
 # Regenerable media artifacts (Phase 4)
 processed/transcripts/*.wav
 processed/image-descriptions/*-frames/
+processed/image-descriptions/*-images/
+raw/telegram/**/*.jpg
+raw/telegram/**/*.jpeg
+raw/telegram/**/*.png
+raw/telegram/**/*.webp
+raw/telegram/**/*.ogg
+raw/telegram/**/*.oga

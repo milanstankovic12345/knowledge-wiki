@@ -19,9 +19,19 @@ def main(argv: list[str] | None = None) -> int:
         "ingest", help="ingest one Markdown/text/PDF/audio/video file from raw/"
     )
     ingest.add_argument("path")
+    sub.add_parser("bot", help="run the Telegram bot (long polling)")
     args = parser.parse_args(argv)
 
     vault = load_vault()
+    if args.command == "bot":
+        from scripts.telegram.bot import BotConfigError, run_bot
+
+        try:
+            run_bot(vault)
+        except BotConfigError as exc:
+            print(f"Cannot start: {exc}", file=sys.stderr)
+            return 2
+        return 0
     try:
         result = ingest_file(vault, args.path)
     except PathRejected as exc:

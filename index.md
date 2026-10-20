@@ -51,6 +51,8 @@
 - [[sources/voice-sample-password-generator]] - voice-sample-password-generator (audio)
 - [[videos/01-mini-python-project-tutorial-password-generator]] - 01 - Mini Python Project Tutorial - Password Generator
 
+## Photos
+
 ## Articles
 
 - [[sources/why-personal-knowledge-management-compounds]] - Why Personal Knowledge Management Compounds

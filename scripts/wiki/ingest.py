@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Callable
@@ -17,13 +18,14 @@ from scripts.config import Vault
 from scripts.database import Job, Source, find_by_hash, open_db
 from scripts.extractors.article import clean_author, extract_article
 from scripts.extractors.audio import Transcriber, transcribe
+from scripts.extractors.image import describe_images, prepare_images
 from scripts.extractors.pdf import extract_pdf
 from scripts.extractors.video import Frame, describe_frames, extract_video
 from scripts.models import Analysis, FrameRef, SourceDoc
 from scripts.providers.base import ProviderUnavailable, TextProvider
 from scripts.providers.router import select_provider, select_vision_provider
 from scripts.providers.vision import VisionProvider
-from scripts.security import validate_raw_path, wrap_untrusted
+from scripts.security import validate_raw_dir, validate_raw_path, wrap_untrusted
 from scripts.storage import dump_frontmatter, parse_frontmatter, sha256_file, slugify
 from scripts.wiki.index import add_index_entry, append_log, set_health
 from scripts.wiki.integrate import (
@@ -41,12 +43,18 @@ SYSTEM_PROMPT = (
     "(1-4 words) suitable as wiki topic titles. Markers like <!-- page: 12 --> give "
     "source page numbers; end a claim with (p. N) when you can tell its page. Markers like "
     "<!-- t: 03:20 --> give a position in a transcribed recording; end a claim with (t. 03:20) "
-    "when you can tell where it was said. "
+    "when you can tell where it was said. Markers like <!-- image: 2 --> number the images of a "
+    "photo set in order; end a claim with (img. 2) when it comes from one image. "
     "Summarise in your own words; never copy long passages."
 )
-FOLDER_TYPES = {"articles": "article", "books": "book"}
-MEDIA_TYPES = {"audio": "telegram_voice", "video": "pc_video"}  # default source type by media kind
-MARKER_LINE = re.compile(r"^<!-- (?:page|t): [^>]+ -->$", re.MULTILINE)
+FOLDER_TYPES = {"articles": "article", "books": "book", "telegram": "telegram_document"}
+MEDIA_TYPES = {  # default source type by media kind
+    "audio": "telegram_voice",
+    "video": "pc_video",
+    "image": "telegram_photo",
+}
+MARKER_LINE = re.compile(r"^<!-- (?:page|t|image): [^>]+ -->$", re.MULTILINE)
+URL_IN_TEXT = re.compile(r"https?://[^\s<>\"')]+")
 JSON_ATTEMPTS = 2
 
 ProviderFactory = Callable[[Vault, str, str, str], TextProvider]
@@ -65,6 +73,7 @@ class IngestResult:
     updated: list[str] = field(default_factory=list)
     book_path: str = ""
     needs_review: list[str] = field(default_factory=list)
+    job_id: int = 0
 
 
 def _now() -> datetime:
@@ -97,10 +106,54 @@ def resolve_privacy(config: dict[str, Any], meta: dict[str, Any], source_type: s
 
 def _media_kind(vault: Vault, path: Path) -> str:
     ext = path.suffix.lower()
-    for kind in ("audio", "video"):
+    for kind in ("audio", "video", "image"):
         if ext in vault.settings["allowed_extensions"][kind]:
             return kind
     return ""
+
+
+def _caption_details(caption: str, fallback_title: str) -> tuple[str, str, str]:
+    """(title, source_url, body) from a user-supplied caption; the caption is untrusted content."""
+    first = caption.strip().splitlines()[0] if caption.strip() else ""
+    url = URL_IN_TEXT.search(caption)
+    title = URL_IN_TEXT.sub("", first).strip()[:80] or fallback_title
+    body = f"## Caption\n\n{caption.strip()}" if caption.strip() else ""
+    return title, url.group(0) if url else "", body
+
+
+def _image_doc(
+    vault: Vault,
+    raw_rel: str,
+    sources: list[Path],
+    stem: str,
+    content_hash: str,
+    caption: str,
+    fallback_title: str,
+    captured_at: str,
+    url: str = "",
+) -> SourceDoc:
+    """Image sources have no text of their own: the body is the caption, the vision model adds
+    descriptions later. Only metadata-free copies of the images are ever shown to a model."""
+    images = prepare_images(vault, sources, stem)
+    title, caption_url, body = _caption_details(caption, fallback_title)
+    source_url = url or caption_url
+    source_type = "instagram" if "instagram.com/" in source_url else "telegram_photo"
+    return SourceDoc(
+        raw_path=raw_rel,
+        source_type=source_type,
+        title=title,
+        source_url=source_url,
+        captured_at=captured_at,
+        content_hash=content_hash,
+        privacy=resolve_privacy(vault.privacy, {}, source_type),
+        body=body,
+        media_kind="image",
+        frames=[FrameRef(path=r, time=str(n)) for n, r in enumerate(images, start=1)],
+    )
+
+
+def read_text_if_exists(path: Path) -> str:
+    return path.read_text(encoding="utf-8").strip() if path.is_file() else ""
 
 
 def parse_source(
@@ -113,6 +166,12 @@ def parse_source(
     pages, low = 0, []
     media: dict[str, Any] = {}
     kind = _media_kind(vault, path)
+    if kind == "image":
+        stem = f"{slugify(path.stem)}-{content_hash[:8]}"
+        rel = path.relative_to(vault.root.resolve()).as_posix()
+        captured = datetime.fromtimestamp(path.stat().st_mtime).date().isoformat()
+        caption = read_text_if_exists(path.with_suffix(".caption.txt"))
+        return _image_doc(vault, rel, [path], stem, content_hash, caption, path.stem, captured)
     if kind:
         stem = f"{slugify(path.stem)}-{content_hash[:8]}"
         meta = {"title": path.stem}
@@ -242,11 +301,84 @@ def ingest_file(
     converter: Any | None = None,
     transcriber: Transcriber | None = None,
     vision_factory: VisionFactory = select_vision_provider,
+    on_job: Callable[[int], None] | None = None,
 ) -> IngestResult:
     exts = vault.settings["allowed_extensions"]
-    allowed = {e for kind in ("document", "audio", "video") for e in exts[kind]}
+    allowed = {e for kind in ("document", "audio", "video", "image") for e in exts[kind]}
     path = validate_raw_path(candidate, vault.root, allowed)
-    content_hash = sha256_file(path)
+    return _ingest(
+        vault,
+        sha256_file(path),
+        path.name,
+        lambda content_hash: parse_source(vault, path, content_hash, converter, transcriber),
+        provider_factory,
+        session,
+        vision_factory,
+        on_job,
+    )
+
+
+def ingest_carousel(
+    vault: Vault,
+    folder: str | Path,
+    provider_factory: ProviderFactory = select_provider,
+    session: Session | None = None,
+    vision_factory: VisionFactory = select_vision_provider,
+    on_job: Callable[[int], None] | None = None,
+) -> IngestResult:
+    """Ingest an ordered image set (`001.jpg`, `002.jpg`, ...) as one source.
+
+    The content hash covers the member hashes in order, so the same images in a different order
+    are a different carousel. `caption.txt` and `original-url.txt` are optional.
+    """
+    directory = validate_raw_dir(folder, vault.root)
+    image_exts = set(vault.settings["allowed_extensions"]["image"])
+    members = sorted(p for p in directory.iterdir() if p.suffix.lower() in image_exts)
+    if not members:
+        raise IngestError("carousel folder contains no images")
+    for member in members:
+        validate_raw_path(member, vault.root, image_exts)
+    joined = "\n".join(sha256_file(m) for m in members)
+    content_hash = hashlib.sha256(joined.encode("utf-8")).hexdigest()
+
+    def build(content_hash: str) -> SourceDoc:
+        stem = f"{slugify(directory.name)}-{content_hash[:8]}"
+        rel = directory.relative_to(vault.root.resolve()).as_posix()
+        captured = datetime.fromtimestamp(directory.stat().st_mtime).date().isoformat()
+        return _image_doc(
+            vault,
+            rel,
+            members,
+            stem,
+            content_hash,
+            read_text_if_exists(directory / "caption.txt"),
+            f"Carousel {directory.name}",
+            captured,
+            read_text_if_exists(directory / "original-url.txt"),
+        )
+
+    return _ingest(
+        vault,
+        content_hash,
+        directory.name,
+        build,
+        provider_factory,
+        session,
+        vision_factory,
+        on_job,
+    )
+
+
+def _ingest(
+    vault: Vault,
+    content_hash: str,
+    original_name: str,
+    make_doc: Callable[[str], SourceDoc],
+    provider_factory: ProviderFactory,
+    session: Session | None,
+    vision_factory: VisionFactory,
+    on_job: Callable[[int], None] | None,
+) -> IngestResult:
     own_session = session is None
     db = session or open_db(vault.path("database"))
     try:
@@ -254,12 +386,12 @@ def ingest_file(
         if known and known.status == "done":
             return IngestResult("duplicate", known.summary_path)
 
-        doc = parse_source(vault, path, content_hash, converter, transcriber)
+        doc = make_doc(content_hash)
         if known is None:
             known = Source(
                 content_hash=content_hash,
                 source_type=doc.source_type,
-                original_name=path.name,
+                original_name=original_name,
                 source_url=doc.source_url,
                 raw_path=doc.raw_path,
                 privacy=doc.privacy,
@@ -270,6 +402,8 @@ def ingest_file(
         job = Job(source_id=known.id, operation="ingest", status="running", started_at=_now())
         db.add(job)
         db.commit()
+        if on_job:
+            on_job(job.id)
 
         try:
             result = _run(vault, doc, provider_factory, vision_factory)
@@ -279,8 +413,12 @@ def ingest_file(
             db.commit()
             raise
         known.status, known.summary_path = "done", result.summary_path
-        job.status, job.completed_at = "done", _now()
+        db.refresh(job)
+        if job.status != "cancelled":  # /cancel on a running job is final
+            job.status = "done"
+        job.completed_at = _now()
         db.commit()
+        result.job_id = job.id
         return result
     finally:
         if own_session:
@@ -297,6 +435,13 @@ def _frame_descriptions(
     """
     if not doc.frames:
         return "", [], []
+    if doc.media_kind == "image":
+        # An image source has nothing else to summarise, so a missing vision model fails the
+        # job (retryable) rather than inventing a description.
+        vision = vision_factory(vault, doc.privacy, doc.source_type, doc.raw_path)
+        stem = f"{slugify(Path(doc.raw_path).stem)}-{doc.content_hash[:8]}"
+        text, path = describe_images(vault, [f.path for f in doc.frames], stem, vision)
+        return f"\n\n## Image descriptions\n\n{text}", [path], []
     try:
         vision = vision_factory(vault, doc.privacy, doc.source_type, doc.raw_path)
     except ProviderUnavailable:
@@ -364,6 +509,8 @@ def _run(
         add_index_entry(index, "Books", f"books/{book.stem}", doc.title)
     elif video:
         add_index_entry(index, "Videos", f"videos/{video.stem}", doc.title)
+    elif doc.media_kind == "image":
+        add_index_entry(index, "Photos", f"sources/{slug}", doc.title)
     elif doc.media_kind:
         add_index_entry(index, "Videos", f"sources/{slug}", f"{doc.title} (audio)")
     else:
