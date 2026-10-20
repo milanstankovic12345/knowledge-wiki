@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from scripts.config import Vault
@@ -22,7 +22,7 @@ from scripts.providers.base import CloudBlocked, ProviderUnavailable
 from scripts.providers.router import select_provider, select_vision_provider
 from scripts.security import redact_secrets
 from scripts.storage import dump_frontmatter, parse_frontmatter, slugify
-from scripts.telegram import query
+from scripts.telegram import intent, query
 from scripts.telegram.jobs import (
     JobRunner,
     cancel_job,
@@ -41,8 +41,13 @@ PRIVACY_CLASSES = ("public", "personal", "confidential", "restricted")
 TRANSCRIPT_PREVIEW_CHARS = 300
 MARKERS = re.compile(r"<!--.*?-->")
 
-HELP = """Send me something to capture it:
-- an article URL
+HELP = """Just type, no commands needed:
+- ask a question and I answer from the wiki
+- write a thought or start with "save:" and I keep it as a note
+- if I can't tell, I ask you with two buttons
+
+Send me something to capture it:
+- an article URL (also inside a sentence)
 - a PDF or other document, a voice note, audio, video
 - a photo, or several photos as one album
 - /ingest <text or URL> to save a note
@@ -84,6 +89,7 @@ class AppState:
     capture: Callable[..., Path] = capture_article
     select_text: Callable[..., Any] = select_provider
     select_vision: Callable[..., Any] = select_vision_provider
+    classify: Callable[..., intent.Decision] = intent.classify
 
 
 Handler = Callable[[Update, ContextTypes.DEFAULT_TYPE, AppState], Awaitable[None]]
@@ -233,11 +239,57 @@ async def on_text(update: Update, context, state: AppState) -> None:
         await capture_url(update, context, state, text)
     elif getattr(message, "forward_origin", None):
         await capture_note(update, context, state, text)
+    elif found := URL_IN_TEXT.search(text):
+        await capture_url(update, context, state, found.group(0))
+    elif intent.is_greeting(text):
+        await sender(update, state)(HELP)
     else:
-        await sender(update, state)(
-            "Nothing saved. Use /ingest <text> to keep a note, /ask <question> to query the wiki, "
-            "or send a URL, file, voice note or photo."
-        )
+        decision = await asyncio.to_thread(state.classify, state.vault, text, state.select_text)
+        if decision.label == "question":
+            await answer_question(update, context, state, decision.text, compare=False)
+        elif decision.label == "note":
+            await capture_note(update, context, state, decision.text)
+        else:
+            await offer_choice(update, context, state, text)
+
+
+PENDING_LIMIT = 20
+
+
+async def offer_choice(update: Update, context, state: AppState, text: str) -> None:
+    """Ask once instead of guessing. The text stays server-side; buttons carry only an id."""
+    message = update.effective_message
+    pending = context.chat_data.setdefault("pending", {})
+    pending[message.message_id] = text
+    while len(pending) > PENDING_LIMIT:
+        pending.pop(next(iter(pending)))
+    mid = message.message_id
+    keyboard = InlineKeyboardMarkup(
+        [[
+            InlineKeyboardButton("Answer it", callback_data=f"pick:ask:{mid}"),
+            InlineKeyboardButton("Save as note", callback_data=f"pick:note:{mid}"),
+        ]]
+    )  # fmt: skip
+    await message.reply_text("Do you want an answer from the wiki, or should I save this?",
+                             reply_markup=keyboard)  # fmt: skip
+
+
+@authorized
+async def on_choice(update: Update, context, state: AppState) -> None:
+    query_ = update.callback_query
+    await query_.answer()
+    match = re.fullmatch(r"pick:(ask|note):(\d+)", query_.data or "")
+    if not match:
+        return
+    text = context.chat_data.get("pending", {}).pop(int(match.group(2)), None)
+    if text is None:
+        await sender(update, state)("That choice expired. Send the message again.")
+        return
+    await query_.edit_message_reply_markup(reply_markup=None)
+    if match.group(1) == "ask":
+        await answer_question(update, context, state, text, compare=False)
+    else:
+        await capture_note(update, context, state, text)
 
 
 @authorized
@@ -518,11 +570,19 @@ async def cmd_search(update: Update, context, state: AppState) -> None:
 
 
 async def _answer(update: Update, context, state: AppState, compare: bool) -> None:
-    send = sender(update, state)
     question = " ".join(context.args or []).strip()
     if not question:
-        await send("Usage: /ask <question>" if not compare else "Usage: /compare <question>")
+        await sender(update, state)(
+            "Usage: /ask <question>" if not compare else "Usage: /compare <question>"
+        )
         return
+    await answer_question(update, context, state, question, compare)
+
+
+async def answer_question(
+    update: Update, context, state: AppState, question: str, compare: bool
+) -> None:
+    send = sender(update, state)
     try:
         text = await asyncio.to_thread(
             query.ask_wiki,

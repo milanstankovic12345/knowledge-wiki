@@ -8,6 +8,7 @@ from telegram import Update
 from telegram.ext import (
     Application,
     ApplicationBuilder,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -72,6 +73,7 @@ def build_application(vault: Vault) -> Application:
     for name, callback in commands.items():
         app.add_handler(CommandHandler(name, callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, h.on_text))
+    app.add_handler(CallbackQueryHandler(h.on_choice, pattern=r"^pick:"))
     app.add_handler(MessageHandler(filters.PHOTO, h.on_photo))
     app.add_handler(MessageHandler(filters.Document.ALL, h.on_document))
     app.add_handler(MessageHandler(filters.VOICE, h.on_voice))
