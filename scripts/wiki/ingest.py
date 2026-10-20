@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from scripts.config import Vault
 from scripts.database import Job, Source, find_by_hash, open_db
+from scripts.extractors.article import clean_author, extract_article
 from scripts.extractors.audio import Transcriber, transcribe
 from scripts.extractors.pdf import extract_pdf
 from scripts.extractors.video import Frame, describe_frames, extract_video
@@ -70,11 +71,28 @@ def _now() -> datetime:
     return datetime.now(UTC).astimezone()
 
 
-def _author(value: Any) -> str:
-    """Clipper writes `author` as a list of `[[Name]]` wikilinks; store plain names."""
-    items = value if isinstance(value, list) else [value]
-    names = [re.sub(r"\[\[|\]\]", "", str(i)).strip() for i in items if i]
-    return ", ".join(n for n in names if n)
+VISIBILITY_CLASSES = {"private": "personal", "public": "public"}
+
+
+def resolve_privacy(config: dict[str, Any], meta: dict[str, Any], source_type: str) -> str:
+    """Privacy class: explicit `privacy`, else clipper `visibility`, else the type default.
+
+    `visibility: private` tightens an article to `personal`. `visibility: public` never loosens a
+    type that requires explicit cloud approval, and an unknown value falls back to the default.
+    """
+    classes = config.get("classifications", {})
+    default = str(
+        config.get("source_defaults", {}).get(
+            source_type, config.get("default_classification", "private")
+        )
+    )
+    declared = str(meta.get("privacy") or "")
+    if declared in classes:
+        return declared
+    mapped = VISIBILITY_CLASSES.get(str(meta.get("visibility") or "").strip().lower(), "")
+    if mapped == "public" and source_type in config.get("cloud_requires_explicit_approval", []):
+        return default
+    return mapped if mapped in classes else default
 
 
 def _media_kind(vault: Vault, path: Path) -> str:
@@ -124,25 +142,30 @@ def parse_source(
             extraction.page_count,
             extraction.low_confidence_pages,
         )
+    elif path.parent.name == "articles" and path.suffix.lower() in (".md", ".txt"):
+        article = extract_article(path.read_text(encoding="utf-8"), path)
+        meta = {
+            **(article.meta or {}),
+            "title": article.title,
+            "author": article.author,
+            "source_url": article.source_url,
+            "captured_at": article.captured_at,
+        }
+        body = article.markdown
     else:
         meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
     rel = path.relative_to(vault.root.resolve()).as_posix()
     default_type = MEDIA_TYPES.get(kind) or FOLDER_TYPES.get(path.parent.name, "article")
     source_type = str(meta.get("source_type") or default_type)
-    classes = vault.privacy.get("classifications", {})
-    declared = str(meta.get("privacy") or "")
-    default = vault.privacy.get("source_defaults", {}).get(
-        source_type, vault.privacy.get("default_classification", "private")
-    )
     return SourceDoc(
         raw_path=rel,
         source_type=source_type,
         title=str(meta.get("title") or path.stem),
-        author=_author(meta.get("author")),
+        author=clean_author(meta.get("author")),
         source_url=str(meta.get("source_url") or meta.get("source") or ""),
         captured_at=str(meta.get("captured_at") or meta.get("created") or ""),
         content_hash=content_hash,
-        privacy=declared if declared in classes else str(default),
+        privacy=resolve_privacy(vault.privacy, meta, source_type),
         body=body.strip(),
         page_count=pages,
         low_confidence_pages=low,

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "Article",
+  "behavior": "create",
+  "noteNameFormat": "{{title}}",
+  "path": "raw/articles",
+  "noteContentFormat": "# {{title}}\n\n## Metadata\n\n- URL: {{url}}\n- Author: {{author}}\n- Captured: {{date}}\n\n## Content\n\n{{content}}\n",
+  "properties": [
+    { "name": "title", "value": "{{title}}", "type": "text" },
+    { "name": "type", "value": "raw-source", "type": "text" },
+    { "name": "source_type", "value": "article", "type": "text" },
+    { "name": "source_url", "value": "{{url}}", "type": "text" },
+    { "name": "author", "value": "{{author}}", "type": "text" },
+    { "name": "captured_at", "value": "{{date}}", "type": "date" },
+    { "name": "status", "value": "pending", "type": "text" },
+    { "name": "visibility", "value": "private", "type": "text" },
+    { "name": "tags", "value": "source/article", "type": "multitext" }
+  ],
+  "triggers": [],
+  "vault": "knowledge-wiki"
+}

@@ -50,3 +50,39 @@ This file is append-only.
 - Pages updated: ["index.md"]
 - Contradictions: none recorded
 - Human review: pending
+
+## [2026-10-20 12:17] ingest | Building RAG Systems: From Zero to Hero
+
+- Source type: article
+- Raw path: raw/articles/Building RAG Systems From Zero to Hero.md
+- Content hash: a8fc1cb7328c160be35830d0596b84d65a3fbe019e37551a6721b4cbc142c1c9
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/building-rag-systems-from-zero-to-hero.md", "wiki/topics/retrieval-augmented-generation-rag.md", "wiki/topics/fine-tuning.md", "wiki/topics/agentic-rag.md", "wiki/topics/context-overflow.md", "wiki/topics/cost-optimization.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-20 13:12] ingest | An App Built for One: Why a Devpost Skill Pack Made Me Spec It Anyway
+
+- Source type: article
+- Raw path: raw/articles/An App Built for One Why a Devpost Skill Pack Made Me Spec It Anyway.md
+- Content hash: c7bb2122719e54341b70e4437f0af51b5881353c55131286983b3b490071b0cf
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/an-app-built-for-one-why-a-devpost-skill-pack-made-me-spec-i.md", "wiki/topics/spec-discipline.md", "wiki/topics/early-testing.md", "wiki/topics/iterative-development.md", "wiki/topics/custom-builds.md", "wiki/topics/scalable-tools.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-20 13:25] ingest | Building RAG Systems: From Zero to Hero
+
+- Source type: article
+- Raw path: raw/articles/Building RAG Systems From Zero to Hero 1.md
+- Content hash: 8ca97217233b56639987d7b30c8c5a3560eeb3e535ef2e8b7145e820901f90f0
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/building-rag-systems-from-zero-to-hero-8ca97217.md", "wiki/topics/user-centric-design.md", "wiki/topics/user-feedback.md", "wiki/topics/continuous-improvement.md", "wiki/topics/customization-vs-scalability.md"]
+- Pages updated: ["wiki/topics/iterative-development.md", "index.md"]
+- Contradictions: none recorded
+- Human review: pending

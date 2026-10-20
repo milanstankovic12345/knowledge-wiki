@@ -16,9 +16,13 @@ rules the LLM follows.
 2. `pip install -r requirements-dev.txt`
 3. Install FFmpeg, yt-dlp, ExifTool (winget) and Ollama; `ollama pull qwen3:8b qwen3-vl:8b embeddinggemma`
 4. Copy `.env.example` to `.env` and fill in the Telegram token and your user ID
-5. Run: `python -m scripts.app`
+5. Ingest a file under `raw/`: `python -m scripts.app ingest raw/articles/<file>.md`
 
 ## Security
 - Only users in `TELEGRAM_ALLOWED_USER_IDS` are served.
 - `config/privacy.yaml` is enforced before every LLM request; private sources never go to cloud.
 - Never commit `.env`. Do not send highly sensitive files through Telegram.
+
+## Web capture
+Clip articles with Obsidian Web Clipper into `raw/articles/` using the template in
+`config/web-clipper/` (see its README). `visibility: private` clips are classified `personal`.

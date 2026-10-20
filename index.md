@@ -22,6 +22,20 @@
 - [[topics/random-password-creation]] - Random password creation
 - [[topics/string-manipulation]] - String manipulation
 - [[topics/python-function-definition]] - Python function definition
+- [[topics/retrieval-augmented-generation-rag]] - Retrieval-Augmented Generation (RAG)
+- [[topics/fine-tuning]] - Fine-tuning
+- [[topics/agentic-rag]] - Agentic RAG
+- [[topics/context-overflow]] - Context overflow
+- [[topics/cost-optimization]] - Cost optimization
+- [[topics/spec-discipline]] - Spec discipline
+- [[topics/early-testing]] - Early testing
+- [[topics/iterative-development]] - Iterative development
+- [[topics/custom-builds]] - Custom builds
+- [[topics/scalable-tools]] - Scalable tools
+- [[topics/user-centric-design]] - User-centric design
+- [[topics/user-feedback]] - User feedback
+- [[topics/continuous-improvement]] - Continuous improvement
+- [[topics/customization-vs-scalability]] - Customization vs. scalability
 
 ## People
 
@@ -39,6 +53,9 @@
 ## Articles
 
 - [[sources/why-personal-knowledge-management-compounds]] - Why Personal Knowledge Management Compounds
+- [[sources/building-rag-systems-from-zero-to-hero]] - Building RAG Systems: From Zero to Hero
+- [[sources/an-app-built-for-one-why-a-devpost-skill-pack-made-me-spec-i]] - An App Built for One: Why a Devpost Skill Pack Made Me Spec It Anyway
+- [[sources/building-rag-systems-from-zero-to-hero-8ca97217]] - Building RAG Systems: From Zero to Hero
 
 ## Concepts
 
@@ -50,7 +67,7 @@
 
 ## Wiki health
 
-- Last ingest: 2026-10-20T11:08:37+02:00
+- Last ingest: 2026-10-20T13:25:02+02:00
 - Last lint:
 - Sources awaiting processing:
 - Failed sources:
