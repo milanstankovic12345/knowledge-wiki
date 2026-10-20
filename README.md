@@ -19,7 +19,7 @@ private data never leaves your machine unless a written policy allows it.**
 | **Local models and cost control** | Text uses `qwen3:8b`, vision uses `qwen3-vl:8b`, speech-to-text uses faster-whisper, all on a single 8 GB GPU through Ollama. Cost: electricity only. Models unload quickly (`keep_alive: 30s`) and jobs run one at a time to fit VRAM. |
 | **Privacy by design / data governance** | Every source gets a privacy class. `config/privacy.yaml` is enforced in code (`scripts/providers/router.py`) before any model call. Local-only paths (`raw/telegram`, `raw/books`, `raw/photos`, `raw/videos`) can never reach a cloud provider, and the model cannot decide otherwise. |
 | **Prompt-injection defence** | All source text and chat messages are wrapped as *untrusted data* (`scripts/security.py`). Instructions hidden in an article, transcript, caption or Telegram message are never followed, and the bot cannot run shell commands. This is covered by tests. |
-| **Grounding and hallucination control** | Every factual claim must link to a source-summary page. Answers state their uncertainty. Contradictions are kept under a History/Contradictions section. Model output is schema-validated JSON with retries. |
+| **Grounding and hallucination control** | Every factual claim must link to a source-summary page. Answers state their uncertainty and quote the pages they rely on; each quote is string-checked against the text the model was given, and unfound quotes trigger a warning. Contradictions are kept under a History/Contradictions section. Model output is schema-validated JSON with retries. |
 | **Multimodal pipeline** | PDF/EPUB/DOCX (Docling), audio and video transcription (faster-whisper), video frames and photos described by a vision model, web articles (trafilatura), YouTube subtitles (yt-dlp). |
 | **Agentic UX** | A local model classifies plain Telegram messages as *question* or *note* and routes them; when unsure it asks with two buttons. No commands needed. |
 | **Engineering quality** | Provider abstraction (local Ollama, Ollama Cloud, OpenAI-compatible), SHA-256 de-duplication, SQLite job state with retry/cancel, ~150 automated tests, Ruff lint, Git history for rollback. |
@@ -122,6 +122,7 @@ Slash commands still work when you want to be explicit:
 | `/ask <question>` / `/compare <question>` | Answer, or compare positions across pages |
 | `/search <words>` | List matching wiki pages (hybrid keyword + meaning search) |
 | `/lint` | Wiki health check: broken links, orphan pages, pages without a source, open contradictions |
+| `/link` | Suggest missing links between related topic/concept pages (by embedding similarity); nothing changes until you press a **Link N** button |
 | `/summarize <title>` | Show a source's stored summary (no model call) |
 | `/ingest <text or URL>` | Force-save a note or URL |
 | `/ingest_local raw/<folder>/<file>` | For files over Telegram's 20 MB limit that you copied into `raw/` yourself |
@@ -186,6 +187,8 @@ design; `AGENTS.md` holds the rules the LLM follows.
   brute-force similarity is fine for hundreds of pages; a dedicated index (QMD) is the next step
   for thousands.
 - `/lint` reports problems but never edits pages (`python -m scripts.app lint` runs it from the PC).
-- `/link` (suggesting missing links between related pages) is not implemented yet.
-- Quality depends on an 8B local model: answers cite sources and state uncertainty, but important
-  claims should be checked against the linked source summary.
+- `/link` suggests links from page-embedding similarity (`link.min_similarity` in
+  `config/settings.yaml`) and only writes after you approve a pair. It needs Ollama's embedding model.
+- Quality depends on an 8B local model. `/ask` and `/compare` show verified quotes as *Evidence* and a
+  *Verification* line. The check is textual: it proves the quote exists in the cited page, not that the
+  answer interprets it correctly, so important claims should still be checked against the source.

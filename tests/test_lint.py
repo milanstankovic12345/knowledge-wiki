@@ -69,6 +69,23 @@ def test_linked_but_unlisted_page_is_not_indexed_not_orphan(vault):
     assert ("not-indexed", "wiki/topics/extra.md") in kinds(vault)
 
 
+def test_source_summary_linked_from_indexed_page_counts_as_indexed(vault):
+    healthy(vault)
+    write(vault, "index.md", INDEX.replace("- [[sources/s]]\n", ""))
+    assert kinds(vault) == set()  # topics/good is indexed and links sources/s
+
+
+def test_source_summary_linked_only_from_unindexed_page_is_still_not_indexed(vault):
+    healthy(vault)
+    bare = INDEX.replace("- [[sources/s]]\n", "").replace("- [[topics/good]]\n", "")
+    write(vault, "index.md", bare)
+    loose = "---\ntype: topic\nsources: [sources/s]\n---\n\n[[topics/good]]\n"
+    write(vault, "wiki/topics/loose.md", loose)
+    found = kinds(vault)
+    assert ("not-indexed", "wiki/sources/s.md") in found
+    assert ("not-indexed", "wiki/topics/good.md") in found
+
+
 def test_run_lint_records_result_and_never_edits_pages(vault):
     healthy(vault)
     before = {p: p.read_text("utf-8") for p in (vault.root / "wiki").rglob("*.md")}

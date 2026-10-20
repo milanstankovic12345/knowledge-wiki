@@ -24,17 +24,19 @@ PAGES = {
 class AnswerProvider:
     name, model = "fake", "fake-1"
 
-    def __init__(self):
+    def __init__(self, quotes=None):
         self.prompts = []
+        self.quotes = quotes
 
     def health(self):
         return True
 
     def generate(self, system, prompt, schema=None):
         self.prompts.append(prompt)
-        return json.dumps(
-            {"answer": "Practice with feedback.", "uncertainty": "Based on one book."}
-        )
+        data = {"answer": "Practice with feedback.", "uncertainty": "Based on one book."}
+        if self.quotes is not None:
+            data["quotes"] = self.quotes
+        return json.dumps(data)
 
 
 @pytest.fixture
@@ -62,6 +64,49 @@ def test_ask_returns_answer_sources_uncertainty_related(wiki):
     assert "Uncertainty:\nBased on one book." in out
     assert "Related pages:" in out
     assert "untrusted source" in provider.prompts[0]
+
+
+DP = "wiki/topics/deliberate-practice.md"
+
+
+def ask_with(wiki, quotes):
+    provider = AnswerProvider(quotes)
+    return ask_wiki(wiki, "What is deliberate practice?", provider_factory=lambda *a: provider)
+
+
+def test_verified_quote_is_shown_as_evidence(wiki):
+    out = ask_with(wiki, [{"page": DP, "quote": "focused practice with feedback"}])
+    assert f'Evidence:\n- "focused practice with feedback" ({DP})' in out
+    assert "all 1 quotes found in sources" in out
+    assert out.index("Uncertainty:") < out.index("Evidence:") < out.index("Related pages:")
+
+
+def test_fabricated_quote_triggers_warning(wiki):
+    out = ask_with(wiki, [{"page": DP, "quote": "talent is everything"}])
+    assert "1 of 1 quotes not found in the cited pages - treat this answer with caution" in out
+    assert "talent is everything" not in out
+
+
+def test_quote_cited_to_page_outside_context_is_unverified(wiki):
+    other = "wiki/topics/spaced-repetition.md"
+    out = ask_with(wiki, [{"page": other, "quote": "Review at intervals"}])
+    assert "not found in the cited pages" in out
+
+
+def test_quote_matching_ignores_whitespace_case_and_markdown(wiki):
+    path = wiki.root / "wiki" / "topics" / "deliberate-practice.md"
+    path.write_text(path.read_text("utf-8") + "\nIt’s **very** [[useful]].\n", "utf-8")
+    quotes = [
+        {"page": DP, "quote": "FOCUSED  practice\nwith feedback"},
+        {"page": DP, "quote": "It's very useful."},
+    ]
+    assert "all 2 quotes found in sources" in ask_with(wiki, quotes)
+
+
+def test_missing_quotes_are_reported_as_not_verified(wiki):
+    out = ask_with(wiki, None)
+    assert "no supporting quotes given - not verified" in out
+    assert "Evidence:" not in out
 
 
 def test_ask_with_no_match_does_not_call_the_model(wiki):

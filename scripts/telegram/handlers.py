@@ -31,6 +31,7 @@ from scripts.telegram.jobs import (
     recent_jobs,
     retry_target,
 )
+from scripts.wiki import link
 from scripts.wiki.ingest import IngestResult, ingest_carousel, ingest_file
 from scripts.wiki.lint import format_report, run_lint
 
@@ -66,7 +67,7 @@ Commands:
 /compare <question> - compare positions in the wiki
 /summarize <title> - stored summary of a source
 /lint - check the wiki for broken links, orphans and missing sources
-/link - not available yet
+/link - suggest missing links between related pages; you approve each one
 
 Never send passwords, keys or identity documents. Telegram itself can read what you send."""
 
@@ -262,6 +263,7 @@ async def on_text(update: Update, context, state: AppState) -> None:
 
 
 PENDING_LIMIT = 20
+LINK_SUGGESTIONS = 5
 
 
 async def offer_choice(update: Update, context, state: AppState, text: str) -> None:
@@ -631,6 +633,58 @@ async def cmd_summarize(update: Update, context, state: AppState) -> None:
 async def cmd_lint(update: Update, context, state: AppState) -> None:
     report = await asyncio.to_thread(run_lint, state.vault)
     await sender(update, state)(format_report(report))
+
+
+@authorized
+async def cmd_link(update: Update, context, state: AppState) -> None:
+    send = sender(update, state)
+    embedder = state.embedder(state.vault)
+    try:
+        if embedder is None:
+            raise ProviderUnavailable("no embedder")
+        found = await asyncio.to_thread(link.suggest_links, state.vault, embedder, LINK_SUGGESTIONS)
+    except ProviderUnavailable:
+        await send("Link suggestions need the local embedding model (ollama).")
+        return
+    if not found:
+        await send("No missing links found between topic and concept pages.")
+        return
+    # Pairs stay server-side; buttons carry only an id (same pattern as offer_choice).
+    pending = context.chat_data.setdefault("link_pending", {})
+    message = update.effective_message
+    lines, buttons = [], []
+    for n, s in enumerate(found, start=1):
+        key = f"{message.message_id}-{n}"
+        pending[key] = (s.a, s.b)
+        lines.append(f"{n}. {s.a} <-> {s.b} ({s.similarity:.2f})")
+        buttons.append(InlineKeyboardButton(f"Link {n}", callback_data=f"link:{key}"))
+    while len(pending) > PENDING_LIMIT:
+        pending.pop(next(iter(pending)))
+    await message.reply_text(
+        clip(state.vault, "Suggested links (nothing changes until you press a button):\n"
+             + "\n".join(lines)),
+        reply_markup=InlineKeyboardMarkup([buttons[i : i + 3] for i in range(0, len(buttons), 3)]),
+    )  # fmt: skip
+
+
+@authorized
+async def on_link_choice(update: Update, context, state: AppState) -> None:
+    query_ = update.callback_query
+    await query_.answer()
+    match = re.fullmatch(r"link:(\d+-\d+)", query_.data or "")
+    if not match:
+        return
+    pair = context.chat_data.get("link_pending", {}).pop(match.group(1), None)
+    if pair is None:
+        await sender(update, state)("That link suggestion expired. Run /link again.")
+        return
+    try:
+        changed = await asyncio.to_thread(link.apply_link, state.vault, *pair)
+    except ValueError:
+        await sender(update, state)("One of those pages no longer exists. Run /link again.")
+        return
+    done = "Linked" if changed else "Already linked"
+    await sender(update, state)(f"{done}: {pair[0]} <-> {pair[1]}")
 
 
 @authorized

@@ -473,3 +473,89 @@ def test_lint_command_is_owner_only(state):
     msg = FakeMessage("/lint")
     run(h.cmd_lint(update_for(msg, user=STRANGER), make_context(state)))
     assert msg.replies == []
+
+
+# --- /link --------------------------------------------------------------------------------------
+
+
+class FakeLinkQuery:
+    def __init__(self, data):
+        self.data = data
+
+    async def answer(self):
+        pass
+
+
+def link_wiki(state):
+    root = state.vault.root
+    (root / "log.md").write_text("# Log\n", "utf-8")
+    for name in ("alpha", "beta"):
+        page = root / "wiki" / "topics" / f"{name}.md"
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(f"---\ntitle: {name.title()}\ntype: topic\n---\n\nText\n", "utf-8")
+
+    class Embedder:
+        model = "fake"
+
+        def embed(self, texts):
+            return [[1.0, 0.0] for _ in texts]
+
+    state.embedder = lambda v: Embedder()
+
+
+def press(state, ctx, data, user=OWNER):
+    msg = FakeMessage()
+    upd = update_for(msg, user=user)
+    upd.callback_query = FakeLinkQuery(data)
+    run(h.on_link_choice(upd, ctx))
+    return msg
+
+
+def test_link_command_suggests_with_buttons_and_changes_nothing(state):
+    link_wiki(state)
+    before = (state.vault.root / "wiki/topics/alpha.md").read_text("utf-8")
+    msg = FakeMessage("/link", message_id=5)
+    ctx = make_context(state)
+    run(h.cmd_link(update_for(msg), ctx))
+    assert "topics/alpha <-> topics/beta" in msg.replies[0]
+    assert ctx.chat_data["link_pending"] == {"5-1": ("topics/alpha", "topics/beta")}
+    button = msg.markup.inline_keyboard[0][0]
+    assert button.callback_data == "link:5-1" and "topics" not in button.callback_data
+    assert (state.vault.root / "wiki/topics/alpha.md").read_text("utf-8") == before
+
+
+def test_link_button_applies_pair_and_stale_button_expires(state):
+    link_wiki(state)
+    ctx = make_context(state)
+    ctx.chat_data["link_pending"] = {"5-1": ("topics/alpha", "topics/beta")}
+    reply = press(state, ctx, "link:5-1")
+    assert reply.replies == ["Linked: topics/alpha <-> topics/beta"]
+    assert "[[topics/beta]]" in (state.vault.root / "wiki/topics/alpha.md").read_text("utf-8")
+    assert "link | topics/alpha" in (state.vault.root / "log.md").read_text("utf-8")
+    assert "expired" in press(state, ctx, "link:5-1").replies[0]  # second press: gone
+
+
+def test_link_embedder_down_gives_clear_message(state):
+    link_wiki(state)
+
+    class Down:
+        model = "fake"
+
+        def embed(self, texts):
+            raise ProviderUnavailable("down")
+
+    state.embedder = lambda v: Down()
+    msg = FakeMessage("/link")
+    run(h.cmd_link(update_for(msg), make_context(state)))
+    assert "local embedding model" in msg.replies[0]
+
+
+def test_link_is_owner_only(state):
+    link_wiki(state)
+    msg = FakeMessage("/link")
+    run(h.cmd_link(update_for(msg, user=STRANGER), make_context(state)))
+    ctx = make_context(state)
+    ctx.chat_data["link_pending"] = {"5-1": ("topics/alpha", "topics/beta")}
+    reply = press(state, ctx, "link:5-1", user=STRANGER)
+    assert msg.replies == [] and reply.replies == []
+    assert "[[" not in (state.vault.root / "wiki/topics/alpha.md").read_text("utf-8")

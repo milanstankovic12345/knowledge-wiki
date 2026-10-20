@@ -49,8 +49,11 @@ class LintReport:
     findings: list[Finding] = field(default_factory=list)
 
 
-def _targets(text: str) -> list[str]:
+def link_targets(text: str) -> list[str]:
     return [m.group(1).strip().removesuffix(".md") for m in LINK.finditer(text)]
+
+
+_targets = link_targets
 
 
 def _section(body: str, heading: str) -> str:
@@ -104,8 +107,11 @@ def lint(vault: Vault) -> LintReport:
         contradictions = _section(body, "Contradictions")
         if contradictions and not NO_CONTENT.fullmatch(contradictions):
             add(Finding("open-contradiction", rel))
+    # Ingest catalogues the book/video page, not its source summary, so a summary counts as
+    # indexed when an indexed page links to it (one hop).
+    reachable = {n for n in pages if n.startswith("sources/") and inbound[n] & indexed}
     for name in pages:
-        if name in indexed:
+        if name in indexed or name in reachable:
             continue
         # Linked from somewhere but not catalogued, or reachable from nowhere at all.
         add(Finding("not-indexed" if inbound[name] else "orphan", f"wiki/{name}.md"))

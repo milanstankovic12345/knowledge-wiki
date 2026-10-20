@@ -67,13 +67,14 @@ def build_application(vault: Vault) -> Application:
         "ask": h.cmd_ask,
         "compare": h.cmd_compare,
         "summarize": h.cmd_summarize,
-        "link": h.cmd_unavailable,
+        "link": h.cmd_link,
         "lint": h.cmd_lint,
     }
     for name, callback in commands.items():
         app.add_handler(CommandHandler(name, callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, h.on_text))
     app.add_handler(CallbackQueryHandler(h.on_choice, pattern=r"^pick:"))
+    app.add_handler(CallbackQueryHandler(h.on_link_choice, pattern=r"^link:"))
     app.add_handler(MessageHandler(filters.PHOTO, h.on_photo))
     app.add_handler(MessageHandler(filters.Document.ALL, h.on_document))
     app.add_handler(MessageHandler(filters.VOICE, h.on_voice))
