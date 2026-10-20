@@ -26,3 +26,27 @@ This file is append-only.
 - Pages updated: ["index.md"]
 - Contradictions: none recorded
 - Human review: pending
+
+## [2026-10-20 10:39] ingest | voice-sample-password-generator
+
+- Source type: telegram_voice
+- Raw path: raw/telegram/voice-sample-password-generator.m4a
+- Content hash: d68dc834e15b3c729558302ef68c66f02147f4b33258ff09fa5adcadb2854e73
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/voice-sample-password-generator.md", "wiki/topics/python-course.md", "wiki/topics/password-generator.md", "wiki/topics/password-manager.md", "wiki/topics/minimum-password-length.md", "wiki/topics/special-characters.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-20 11:08] ingest | 01 - Mini Python Project Tutorial - Password Generator
+
+- Source type: pc_video
+- Raw path: raw/videos/01 - Mini Python Project Tutorial - Password Generator.mp4
+- Content hash: 6e08882b9d03bc4cf47a1f62f730271d3cfccab37e9c155d0c0149172c687781
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/01-mini-python-project-tutorial-password-generator.md", "wiki/videos/01-mini-python-project-tutorial-password-generator.md", "wiki/topics/password-generation.md", "wiki/topics/user-input-handling.md", "wiki/topics/random-password-creation.md", "wiki/topics/string-manipulation.md", "wiki/topics/python-function-definition.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending

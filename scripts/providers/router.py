@@ -7,6 +7,7 @@ from typing import Any
 from scripts.config import Vault
 from scripts.providers.base import CloudBlocked, ProviderUnavailable, TextProvider
 from scripts.providers.ollama_local import OllamaLocalProvider
+from scripts.providers.vision import OllamaVisionProvider, VisionProvider
 
 CLOUD_PROVIDERS = {"ollama-cloud", "openai-compatible", "hybrid"}
 
@@ -29,14 +30,10 @@ def cloud_allowed(
     return approved or not needs_approval
 
 
-def select_provider(
-    vault: Vault,
-    privacy_class: str,
-    source_type: str,
-    raw_path: str,
-    requested: str | None = None,
-) -> TextProvider:
-    """Pick a provider. Local content never falls back to cloud, even if local is down."""
+def _require_local(
+    vault: Vault, privacy_class: str, source_type: str, raw_path: str, requested: str | None
+) -> None:
+    """Raise unless the request may be served by a local provider. Never falls back to cloud."""
     requested = requested or vault.provider.llm_provider
     if requested in CLOUD_PROVIDERS and not cloud_allowed(
         vault.privacy, privacy_class, source_type, raw_path
@@ -51,6 +48,16 @@ def select_provider(
     if requested != "local":
         raise ProviderUnavailable(f"unknown provider {requested!r}")
 
+
+def select_provider(
+    vault: Vault,
+    privacy_class: str,
+    source_type: str,
+    raw_path: str,
+    requested: str | None = None,
+) -> TextProvider:
+    """Pick a provider. Local content never falls back to cloud, even if local is down."""
+    _require_local(vault, privacy_class, source_type, raw_path, requested)
     provider = OllamaLocalProvider(
         vault.provider.ollama_local_url,
         vault.provider.ollama_local_text_model,
@@ -58,4 +65,23 @@ def select_provider(
     )
     if not provider.health():
         raise ProviderUnavailable("local Ollama is unavailable or the model is not pulled")
+    return provider
+
+
+def select_vision_provider(
+    vault: Vault,
+    privacy_class: str,
+    source_type: str,
+    raw_path: str,
+    requested: str | None = None,
+) -> VisionProvider:
+    """Same privacy rules as `select_provider`, for image description."""
+    _require_local(vault, privacy_class, source_type, raw_path, requested)
+    provider = OllamaVisionProvider(
+        vault.provider.ollama_local_url,
+        vault.provider.ollama_local_vision_model,
+        keep_alive=str(vault.settings.get("models", {}).get("keep_alive", "30s")),
+    )
+    if not provider.health():
+        raise ProviderUnavailable("local vision model is unavailable or not pulled")
     return provider

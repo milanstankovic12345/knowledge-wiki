@@ -6,6 +6,7 @@ import argparse
 import sys
 
 from scripts.config import load_vault
+from scripts.extractors.tools import ExtractionError
 from scripts.providers.base import CloudBlocked, ProviderUnavailable
 from scripts.security import PathRejected
 from scripts.wiki.ingest import IngestError, ingest_file
@@ -14,7 +15,9 @@ from scripts.wiki.ingest import IngestError, ingest_file
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="scripts.app")
     sub = parser.add_subparsers(dest="command", required=True)
-    ingest = sub.add_parser("ingest", help="ingest one Markdown/text/PDF file from raw/")
+    ingest = sub.add_parser(
+        "ingest", help="ingest one Markdown/text/PDF/audio/video file from raw/"
+    )
     ingest.add_argument("path")
     args = parser.parse_args(argv)
 
@@ -27,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     except CloudBlocked as exc:
         print(f"Blocked: {exc}", file=sys.stderr)
         return 3
-    except (ProviderUnavailable, IngestError) as exc:
+    except (ProviderUnavailable, IngestError, ExtractionError) as exc:
         print(f"Failed: {exc}", file=sys.stderr)
         return 1
 

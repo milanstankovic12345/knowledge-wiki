@@ -37,3 +37,7 @@ raw/**/*.pdf
 # Obsidian plugin secrets (REST API key, TLS keys)
 .obsidian/plugins/obsidian-local-rest-api/data.json
 .obsidian/plugins/*/data.json
+
+# Regenerable media artifacts (Phase 4)
+processed/transcripts/*.wav
+processed/image-descriptions/*-frames/

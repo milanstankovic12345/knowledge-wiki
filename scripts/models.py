@@ -27,6 +27,11 @@ class Analysis(BaseModel):
         )
 
 
+class FrameRef(BaseModel):
+    path: str
+    time: str
+
+
 class SourceDoc(BaseModel):
     """A raw source after parsing, before any LLM work."""
 
@@ -41,3 +46,11 @@ class SourceDoc(BaseModel):
     body: str
     page_count: int = 0
     low_confidence_pages: list[int] = Field(default_factory=list)
+    # Audio/video extraction (empty for documents).
+    media_kind: str = ""  # "audio" | "video"
+    duration_seconds: float = 0.0
+    language: str = ""
+    extraction_model: str = ""
+    processed_paths: list[str] = Field(default_factory=list)
+    frames: list[FrameRef] = Field(default_factory=list)
+    review_notes: list[str] = Field(default_factory=list)

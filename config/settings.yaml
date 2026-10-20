@@ -28,6 +28,7 @@ transcription:
 
 video:
   frame_interval_seconds: 60
+  max_frames: 40   # longer videos widen the interval
 
 youtube:
   subtitle_langs: ["en.*", "sl.*", "sr.*"]

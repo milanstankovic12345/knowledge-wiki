@@ -20,6 +20,7 @@ class ProviderSettings(BaseSettings):
     llm_provider: str = "local"
     ollama_local_url: str = "http://127.0.0.1:11434"
     ollama_local_text_model: str = "qwen3:8b"
+    ollama_local_vision_model: str = "qwen3-vl:8b"
 
 
 @dataclass

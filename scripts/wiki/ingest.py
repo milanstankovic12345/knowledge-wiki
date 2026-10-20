@@ -15,10 +15,13 @@ from sqlalchemy.orm import Session
 
 from scripts.config import Vault
 from scripts.database import Job, Source, find_by_hash, open_db
-from scripts.extractors.pdf import PAGE_MARKER, PAGE_MARKER_RE, extract_pdf
-from scripts.models import Analysis, SourceDoc
+from scripts.extractors.audio import Transcriber, transcribe
+from scripts.extractors.pdf import extract_pdf
+from scripts.extractors.video import Frame, describe_frames, extract_video
+from scripts.models import Analysis, FrameRef, SourceDoc
 from scripts.providers.base import ProviderUnavailable, TextProvider
-from scripts.providers.router import select_provider
+from scripts.providers.router import select_provider, select_vision_provider
+from scripts.providers.vision import VisionProvider
 from scripts.security import validate_raw_path, wrap_untrusted
 from scripts.storage import dump_frontmatter, parse_frontmatter, sha256_file, slugify
 from scripts.wiki.index import add_index_entry, append_log, set_health
@@ -27,6 +30,7 @@ from scripts.wiki.integrate import (
     topic_slugs,
     write_book_page,
     write_source_summary,
+    write_video_page,
 )
 
 SYSTEM_PROMPT = (
@@ -34,13 +38,18 @@ SYSTEM_PROMPT = (
     "Respond only with JSON matching the schema. Be faithful to the text; "
     "do not add facts that are not in it. 'concepts' are short noun phrases "
     "(1-4 words) suitable as wiki topic titles. Markers like <!-- page: 12 --> give "
-    "source page numbers; end a claim with (p. N) when you can tell its page. "
+    "source page numbers; end a claim with (p. N) when you can tell its page. Markers like "
+    "<!-- t: 03:20 --> give a position in a transcribed recording; end a claim with (t. 03:20) "
+    "when you can tell where it was said. "
     "Summarise in your own words; never copy long passages."
 )
 FOLDER_TYPES = {"articles": "article", "books": "book"}
+MEDIA_TYPES = {"audio": "telegram_voice", "video": "pc_video"}  # default source type by media kind
+MARKER_LINE = re.compile(r"^<!-- (?:page|t): [^>]+ -->$", re.MULTILINE)
 JSON_ATTEMPTS = 2
 
 ProviderFactory = Callable[[Vault, str, str, str], TextProvider]
+VisionFactory = Callable[[Vault, str, str, str], VisionProvider]
 
 
 class IngestError(RuntimeError):
@@ -68,11 +77,45 @@ def _author(value: Any) -> str:
     return ", ".join(n for n in names if n)
 
 
+def _media_kind(vault: Vault, path: Path) -> str:
+    ext = path.suffix.lower()
+    for kind in ("audio", "video"):
+        if ext in vault.settings["allowed_extensions"][kind]:
+            return kind
+    return ""
+
+
 def parse_source(
-    vault: Vault, path: Path, content_hash: str, converter: Any | None = None
+    vault: Vault,
+    path: Path,
+    content_hash: str,
+    converter: Any | None = None,
+    transcriber: Transcriber | None = None,
 ) -> SourceDoc:
     pages, low = 0, []
-    if path.suffix.lower() == ".pdf":
+    media: dict[str, Any] = {}
+    kind = _media_kind(vault, path)
+    if kind:
+        stem = f"{slugify(path.stem)}-{content_hash[:8]}"
+        meta = {"title": path.stem}
+        meta["captured_at"] = datetime.fromtimestamp(path.stat().st_mtime).date().isoformat()
+        if kind == "video":
+            video = extract_video(path, vault, stem, transcriber)
+            transcript, frames = video.transcript, video.frames
+            duration = video.duration
+        else:
+            transcript, frames, duration = transcribe(path, vault, stem, transcriber), [], 0.0
+        body = transcript.markdown
+        media = {
+            "media_kind": kind,
+            "duration_seconds": duration or transcript.duration,
+            "language": transcript.language,
+            "extraction_model": transcript.model,
+            "processed_paths": list(transcript.paths),
+            "frames": [FrameRef(path=f.path, time=f.time) for f in frames],
+            "review_notes": list(transcript.review),
+        }
+    elif path.suffix.lower() == ".pdf":
         extraction = extract_pdf(path, converter)
         meta = {"title": extraction.title, "author": extraction.author}
         meta["captured_at"] = datetime.fromtimestamp(path.stat().st_mtime).date().isoformat()
@@ -84,7 +127,8 @@ def parse_source(
     else:
         meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
     rel = path.relative_to(vault.root.resolve()).as_posix()
-    source_type = str(meta.get("source_type") or FOLDER_TYPES.get(path.parent.name, "article"))
+    default_type = MEDIA_TYPES.get(kind) or FOLDER_TYPES.get(path.parent.name, "article")
+    source_type = str(meta.get("source_type") or default_type)
     classes = vault.privacy.get("classifications", {})
     declared = str(meta.get("privacy") or "")
     default = vault.privacy.get("source_defaults", {}).get(
@@ -102,6 +146,7 @@ def parse_source(
         body=body.strip(),
         page_count=pages,
         low_confidence_pages=low,
+        **media,
     )
 
 
@@ -125,14 +170,14 @@ def chunk_text(text: str, limit: int) -> list[str]:
     return chunks or [""]
 
 
-def _with_page_context(chunks: list[str]) -> list[str]:
-    """Keep page numbers usable: a chunk that starts mid-page gets the current marker."""
-    page, out = None, []
+def _with_marker_context(chunks: list[str]) -> list[str]:
+    """Keep positions usable: a chunk that starts mid-source gets the current page/time marker."""
+    marker, out = None, []
     for chunk in chunks:
-        if page and not chunk.lstrip().startswith("<!-- page:"):
-            chunk = f"{PAGE_MARKER.format(n=page)}\n\n{chunk}"
-        found = PAGE_MARKER_RE.findall(chunk)
-        page = found[-1] if found else page
+        if marker and not chunk.lstrip().startswith("<!-- "):
+            chunk = f"{marker}\n\n{chunk}"
+        found = MARKER_LINE.findall(chunk)
+        marker = found[-1] if found else marker
         out.append(chunk)
     return out
 
@@ -141,7 +186,7 @@ def analyse(provider: TextProvider, body: str, limit: int) -> Analysis:
     schema = Analysis.model_json_schema()
     schema["required"] = list(schema["properties"])  # defaults would let the model skip fields
     result: Analysis | None = None
-    for chunk in _with_page_context(chunk_text(body, limit)):
+    for chunk in _with_marker_context(chunk_text(body, limit)):
         part = None
         for _ in range(JSON_ATTEMPTS):
             raw = provider.generate(SYSTEM_PROMPT, wrap_untrusted(chunk), schema)
@@ -172,8 +217,11 @@ def ingest_file(
     provider_factory: ProviderFactory = select_provider,
     session: Session | None = None,
     converter: Any | None = None,
+    transcriber: Transcriber | None = None,
+    vision_factory: VisionFactory = select_vision_provider,
 ) -> IngestResult:
-    allowed = set(vault.settings["allowed_extensions"]["document"])
+    exts = vault.settings["allowed_extensions"]
+    allowed = {e for kind in ("document", "audio", "video") for e in exts[kind]}
     path = validate_raw_path(candidate, vault.root, allowed)
     content_hash = sha256_file(path)
     own_session = session is None
@@ -183,7 +231,7 @@ def ingest_file(
         if known and known.status == "done":
             return IngestResult("duplicate", known.summary_path)
 
-        doc = parse_source(vault, path, content_hash, converter)
+        doc = parse_source(vault, path, content_hash, converter, transcriber)
         if known is None:
             known = Source(
                 content_hash=content_hash,
@@ -201,7 +249,7 @@ def ingest_file(
         db.commit()
 
         try:
-            result = _run(vault, doc, provider_factory)
+            result = _run(vault, doc, provider_factory, vision_factory)
         except (IngestError, ProviderUnavailable, PermissionError, OSError) as exc:
             job.status, job.error_message = "failed", str(exc)
             known.status = "failed"
@@ -216,42 +264,85 @@ def ingest_file(
             db.close()
 
 
-def _run(vault: Vault, doc: SourceDoc, provider_factory: ProviderFactory) -> IngestResult:
+def _frame_descriptions(
+    vault: Vault, doc: SourceDoc, vision_factory: VisionFactory
+) -> tuple[str, list[str], list[str]]:
+    """Describe sampled video frames. Returns (body addition, processed paths, review notes).
+
+    If the local vision model is unavailable nothing is invented: the frames stay on disk and
+    the summary is flagged. Cloud-blocked requests still raise.
+    """
+    if not doc.frames:
+        return "", [], []
+    try:
+        vision = vision_factory(vault, doc.privacy, doc.source_type, doc.raw_path)
+    except ProviderUnavailable:
+        note = (
+            f"Frame descriptions pending: vision model unavailable; {len(doc.frames)} sampled "
+            "frames are kept under processed/image-descriptions/."
+        )
+        return "", [], [note]
+    frames = [Frame(f.path, f.time) for f in doc.frames]
+    stem = Path(doc.processed_paths[0]).stem
+    text, path = describe_frames(vault, frames, stem, vision)
+    return f"\n\n## Frame descriptions\n\n{text}", [path], []
+
+
+def _run(
+    vault: Vault, doc: SourceDoc, provider_factory: ProviderFactory, vision_factory: VisionFactory
+) -> IngestResult:
     provider = provider_factory(vault, doc.privacy, doc.source_type, doc.raw_path)
     limit = int(vault.settings.get("models", {}).get("context_chars", 24000))
-    analysis = analyse(provider, doc.body, limit)
+    extra, frame_paths, frame_notes = _frame_descriptions(vault, doc, vision_factory)
+    analysis = analyse(provider, doc.body + extra, limit)
 
     now = _now()
     stamp, today = now.isoformat(timespec="seconds"), now.date().isoformat()
     slug = _unique_slug(vault, doc.title, doc.content_hash)
 
     # Pass 1 output: deterministic extraction, written once and never rewritten by the LLM.
-    processed = vault.root / "processed" / "documents" / f"{slug}.md"
-    if not processed.exists():
-        meta = {"raw_path": doc.raw_path, "content_hash": doc.content_hash, "title": doc.title}
-        if doc.page_count:
-            meta |= {"page_count": doc.page_count, "low_confidence_pages": doc.low_confidence_pages}
-        processed.write_text(dump_frontmatter(meta, doc.body + "\n"), encoding="utf-8")
-    processed_rel = processed.relative_to(vault.root).as_posix()
+    if doc.media_kind:  # transcripts/frame descriptions were already written during extraction
+        processed_rels = [*doc.processed_paths, *frame_paths]
+    else:
+        processed = vault.root / "processed" / "documents" / f"{slug}.md"
+        if not processed.exists():
+            meta = {"raw_path": doc.raw_path, "content_hash": doc.content_hash, "title": doc.title}
+            if doc.page_count:
+                meta |= {
+                    "page_count": doc.page_count,
+                    "low_confidence_pages": doc.low_confidence_pages,
+                }
+            processed.write_text(dump_frontmatter(meta, doc.body + "\n"), encoding="utf-8")
+        processed_rels = [processed.relative_to(vault.root).as_posix()]
 
     # Pass 2: LLM integration.
     slugs = topic_slugs(analysis)
-    review = [
-        f"Little or no text extracted on page {n}; check OCR/layout against the raw PDF."
-        for n in doc.low_confidence_pages
-    ]
+    review = (
+        [
+            f"Little or no text extracted on page {n}; check OCR/layout against the raw PDF."
+            for n in doc.low_confidence_pages
+        ]
+        + doc.review_notes
+        + frame_notes
+    )
     summary = write_source_summary(
-        vault, doc, analysis, slug, slugs, processed_rel, provider.name, provider.model, stamp,
+        vault, doc, analysis, slug, slugs, processed_rels, provider.name, provider.model, stamp,
         review,
     )  # fmt: skip
-    book = None
+    book = video = None
     if doc.source_type == "book":
-        book = write_book_page(vault, doc, analysis, slug, slugs, processed_rel, stamp, today)
+        book = write_book_page(vault, doc, analysis, slug, slugs, processed_rels[0], stamp, today)
+    elif doc.media_kind == "video":
+        video = write_video_page(vault, doc, analysis, slug, slugs, processed_rels, review)
     created, updated = integrate_topics(vault, doc, analysis, slug, today)
 
     index = vault.root / "index.md"
     if book:
         add_index_entry(index, "Books", f"books/{book.stem}", doc.title)
+    elif video:
+        add_index_entry(index, "Videos", f"videos/{video.stem}", doc.title)
+    elif doc.media_kind:
+        add_index_entry(index, "Videos", f"sources/{slug}", f"{doc.title} (audio)")
     else:
         add_index_entry(index, "Articles", f"sources/{slug}", doc.title)
     by_slug = {slugify(c): c for c in analysis.concepts}
@@ -271,6 +362,7 @@ def _run(vault: Vault, doc: SourceDoc, provider_factory: ProviderFactory) -> Ing
             "Pages created": json.dumps(
                 [f"wiki/sources/{slug}.md"]
                 + ([f"wiki/books/{book.stem}.md"] if book else [])
+                + ([f"wiki/videos/{video.stem}.md"] if video else [])
                 + [f"wiki/topics/{c}.md" for c in created]
             ),
             "Pages updated": json.dumps([f"wiki/topics/{u}.md" for u in updated] + ["index.md"]),
