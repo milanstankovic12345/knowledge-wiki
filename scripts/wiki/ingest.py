@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -60,6 +61,13 @@ def _now() -> datetime:
     return datetime.now(UTC).astimezone()
 
 
+def _author(value: Any) -> str:
+    """Clipper writes `author` as a list of `[[Name]]` wikilinks; store plain names."""
+    items = value if isinstance(value, list) else [value]
+    names = [re.sub(r"\[\[|\]\]", "", str(i)).strip() for i in items if i]
+    return ", ".join(n for n in names if n)
+
+
 def parse_source(
     vault: Vault, path: Path, content_hash: str, converter: Any | None = None
 ) -> SourceDoc:
@@ -86,9 +94,9 @@ def parse_source(
         raw_path=rel,
         source_type=source_type,
         title=str(meta.get("title") or path.stem),
-        author=str(meta.get("author") or ""),
-        source_url=str(meta.get("source_url") or ""),
-        captured_at=str(meta.get("captured_at") or ""),
+        author=_author(meta.get("author")),
+        source_url=str(meta.get("source_url") or meta.get("source") or ""),
+        captured_at=str(meta.get("captured_at") or meta.get("created") or ""),
         content_hash=content_hash,
         privacy=declared if declared in classes else str(default),
         body=body.strip(),

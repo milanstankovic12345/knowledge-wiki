@@ -124,3 +124,19 @@ def test_log_is_append_only(vault):
     after = log.read_text("utf-8")
     assert after.startswith(before)
     assert after.index("| A") < after.index("| B")
+
+
+def test_web_clipper_front_matter_is_understood(vault, factory):
+    clip = vault.root / "raw" / "articles" / "Clip.md"
+    clip.write_text(
+        '---\ntitle: "Clipped"\nsource: "https://example.com/c"\nauthor:\n  - "[[Jane Doe]]"\n'
+        '  - "[[John Roe]]"\npublished: 2025-05-22\ncreated: 2026-10-20\n'
+        "tags:\n  - clippings\n---\n# Clipped\n\nBody text.\n",
+        "utf-8",
+    )
+    result = ingest_file(vault, clip, factory)
+    meta, _ = parse_frontmatter((vault.root / result.summary_path).read_text("utf-8"))
+    assert meta["source_url"] == "https://example.com/c"
+    assert meta["captured_at"] == "2026-10-20"
+    assert meta["creator"] == "Jane Doe, John Roe"
+    assert meta["privacy"] == "public"
