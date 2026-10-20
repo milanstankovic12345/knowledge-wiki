@@ -22,6 +22,12 @@ class ProviderSettings(BaseSettings):
     ollama_local_url: str = "http://127.0.0.1:11434"
     ollama_local_text_model: str = "qwen3:8b"
     ollama_local_vision_model: str = "qwen3-vl:8b"
+    ollama_cloud_url: str = "https://ollama.com"
+    ollama_cloud_api_key: SecretStr = SecretStr("")
+    ollama_cloud_text_model: str = ""
+    openai_compatible_base_url: str = ""
+    openai_compatible_api_key: SecretStr = SecretStr("")
+    openai_compatible_text_model: str = ""
     telegram_bot_token: SecretStr = SecretStr("")
     telegram_allowed_user_ids: str = ""
 

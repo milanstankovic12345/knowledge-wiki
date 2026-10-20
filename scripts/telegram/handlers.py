@@ -36,7 +36,7 @@ log = logging.getLogger("knowledge_wiki.telegram")
 
 URL_ONLY = re.compile(r"https?://\S+")
 URL_IN_TEXT = re.compile(r"https?://[^\s<>\"')]+")
-PROVIDERS = ("local", "ollama-cloud", "hybrid")
+PROVIDERS = ("local", "ollama-cloud", "openai-compatible", "hybrid")
 PRIVACY_CLASSES = ("public", "personal", "confidential", "restricted")
 TRANSCRIPT_PREVIEW_CHARS = 300
 MARKERS = re.compile(r"<!--.*?-->")

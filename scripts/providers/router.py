@@ -6,7 +6,9 @@ from typing import Any
 
 from scripts.config import Vault
 from scripts.providers.base import CloudBlocked, ProviderUnavailable, TextProvider
+from scripts.providers.ollama_cloud import OllamaCloudProvider
 from scripts.providers.ollama_local import OllamaLocalProvider
+from scripts.providers.openai_compatible import OpenAICompatibleProvider
 from scripts.providers.vision import OllamaVisionProvider, VisionProvider
 
 CLOUD_PROVIDERS = {"ollama-cloud", "openai-compatible", "hybrid"}
@@ -30,10 +32,14 @@ def cloud_allowed(
     return approved or not needs_approval
 
 
-def _require_local(
+def _cloud_requested(
     vault: Vault, privacy_class: str, source_type: str, raw_path: str, requested: str | None
-) -> None:
-    """Raise unless the request may be served by a local provider. Never falls back to cloud."""
+) -> str:
+    """Return the effective provider name. Raises CloudBlocked if policy forbids a cloud request.
+
+    A cloud-class request (including `hybrid`) for content the policy keeps local is refused, not
+    silently rerouted, so the caller sees the block.
+    """
     requested = requested or vault.provider.llm_provider
     if requested in CLOUD_PROVIDERS and not cloud_allowed(
         vault.privacy, privacy_class, source_type, raw_path
@@ -42,22 +48,12 @@ def _require_local(
             f"source is classified {privacy_class!r}; cloud processing is disabled. "
             "Use local processing or explicitly approve cloud use for this source."
         )
-    if requested in CLOUD_PROVIDERS:
-        # Policy would allow it, but cloud providers arrive in Phase 7.
-        raise ProviderUnavailable(f"provider {requested!r} is not implemented yet")
-    if requested != "local":
+    if requested != "local" and requested not in CLOUD_PROVIDERS:
         raise ProviderUnavailable(f"unknown provider {requested!r}")
+    return requested
 
 
-def select_provider(
-    vault: Vault,
-    privacy_class: str,
-    source_type: str,
-    raw_path: str,
-    requested: str | None = None,
-) -> TextProvider:
-    """Pick a provider. Local content never falls back to cloud, even if local is down."""
-    _require_local(vault, privacy_class, source_type, raw_path, requested)
+def _local_text(vault: Vault) -> TextProvider:
     provider = OllamaLocalProvider(
         vault.provider.ollama_local_url,
         vault.provider.ollama_local_text_model,
@@ -68,6 +64,43 @@ def select_provider(
     return provider
 
 
+def _cloud_text(vault: Vault, name: str) -> TextProvider:
+    cfg = vault.provider
+    if name == "openai-compatible":
+        return OpenAICompatibleProvider(
+            cfg.openai_compatible_base_url,
+            cfg.openai_compatible_api_key.get_secret_value(),
+            cfg.openai_compatible_text_model,
+        )
+    return OllamaCloudProvider(
+        cfg.ollama_cloud_url,
+        cfg.ollama_cloud_api_key.get_secret_value(),
+        cfg.ollama_cloud_text_model,
+    )
+
+
+def select_provider(
+    vault: Vault,
+    privacy_class: str,
+    source_type: str,
+    raw_path: str,
+    requested: str | None = None,
+) -> TextProvider:
+    """Pick a provider after the privacy check.
+
+    Local content never falls back to cloud, even if local is down. Cloud-permitted content tries
+    the cloud provider first (`hybrid` uses Ollama Cloud) and falls back to local when it is
+    unconfigured or unreachable.
+    """
+    requested = _cloud_requested(vault, privacy_class, source_type, raw_path, requested)
+    if requested == "local":
+        return _local_text(vault)
+    cloud = _cloud_text(vault, "ollama-cloud" if requested == "hybrid" else requested)
+    if cloud.health():
+        return cloud
+    return _local_text(vault)
+
+
 def select_vision_provider(
     vault: Vault,
     privacy_class: str,
@@ -76,7 +109,9 @@ def select_vision_provider(
     requested: str | None = None,
 ) -> VisionProvider:
     """Same privacy rules as `select_provider`, for image description."""
-    _require_local(vault, privacy_class, source_type, raw_path, requested)
+    # Vision stays local until a cloud vision model is configured; cloud requests are still
+    # policy-checked, then served locally.
+    _cloud_requested(vault, privacy_class, source_type, raw_path, requested)
     provider = OllamaVisionProvider(
         vault.provider.ollama_local_url,
         vault.provider.ollama_local_vision_model,
