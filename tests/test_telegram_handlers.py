@@ -70,6 +70,7 @@ def state(vault, factory, fake):
         (vault.root / d).mkdir(parents=True, exist_ok=True)
     st = h.AppState(vault, frozenset({OWNER}), JobRunner(vault))
     st.select_text = lambda v, p, s, r, requested=None: fake
+    st.embedder = lambda v: None  # keyword search only; no live Ollama in unit tests
     vault.settings["telegram"]["media_group_wait_seconds"] = 0.05
     return st
 
@@ -452,3 +453,23 @@ def test_runner_maps_errors_to_safe_messages(state):
     assert texts[0].startswith("Blocked:")
     assert texts[1].startswith("Failed: bad page")
     assert "RuntimeError" in texts[2] and "boom" not in texts[2]
+
+
+def test_lint_command_reports_and_records(state):
+    root = state.vault.root
+    (root / "index.md").write_text("# Index\n\n## Wiki health\n\n- Last lint:\n", "utf-8")
+    (root / "log.md").write_text("# Log\n", "utf-8")
+    page = root / "wiki" / "topics" / "t.md"
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text("---\ntype: topic\n---\n\nSee [[topics/missing]]\n", "utf-8")
+    msg = FakeMessage("/lint")
+    run(h.cmd_lint(update_for(msg), make_context(state)))
+    assert "broken-link" in msg.replies[0] and "wiki/topics/t.md" in msg.replies[0]
+    assert "issues)" in (root / "index.md").read_text("utf-8")
+    assert "lint |" in (root / "log.md").read_text("utf-8")
+
+
+def test_lint_command_is_owner_only(state):
+    msg = FakeMessage("/lint")
+    run(h.cmd_lint(update_for(msg, user=STRANGER), make_context(state)))
+    assert msg.replies == []

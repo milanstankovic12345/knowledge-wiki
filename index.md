@@ -77,7 +77,7 @@
 ## Wiki health
 
 - Last ingest: 2026-10-20T17:52:05+02:00
-- Last lint:
+- Last lint: 2026-10-20T21:50:03+02:00 (2 issues)
 - Sources awaiting processing:
 - Failed sources:
 - Orphan pages:

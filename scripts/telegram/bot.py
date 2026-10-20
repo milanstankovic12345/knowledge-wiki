@@ -68,7 +68,7 @@ def build_application(vault: Vault) -> Application:
         "compare": h.cmd_compare,
         "summarize": h.cmd_summarize,
         "link": h.cmd_unavailable,
-        "lint": h.cmd_unavailable,
+        "lint": h.cmd_lint,
     }
     for name, callback in commands.items():
         app.add_handler(CommandHandler(name, callback))

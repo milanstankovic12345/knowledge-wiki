@@ -20,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     ingest.add_argument("path")
     sub.add_parser("bot", help="run the Telegram bot (long polling)")
+    sub.add_parser("lint", help="check the wiki for broken links, orphans and missing sources")
     args = parser.parse_args(argv)
 
     vault = load_vault()
@@ -32,6 +33,12 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Cannot start: {exc}", file=sys.stderr)
             return 2
         return 0
+    if args.command == "lint":
+        from scripts.wiki.lint import format_report, run_lint
+
+        report = run_lint(vault)
+        print(format_report(report))
+        return 1 if report.findings else 0
     try:
         result = ingest_file(vault, args.path)
     except PathRejected as exc:

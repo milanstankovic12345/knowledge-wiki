@@ -22,6 +22,7 @@ class ProviderSettings(BaseSettings):
     ollama_local_url: str = "http://127.0.0.1:11434"
     ollama_local_text_model: str = "qwen3:8b"
     ollama_local_vision_model: str = "qwen3-vl:8b"
+    ollama_local_embed_model: str = "embeddinggemma"
     ollama_cloud_url: str = "https://ollama.com"
     ollama_cloud_api_key: SecretStr = SecretStr("")
     ollama_cloud_text_model: str = ""

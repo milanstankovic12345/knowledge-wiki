@@ -19,6 +19,7 @@ from telegram.ext import ContextTypes
 from scripts.config import Vault
 from scripts.extractors.url import capture_article
 from scripts.providers.base import CloudBlocked, ProviderUnavailable
+from scripts.providers.embeddings import OllamaEmbedder
 from scripts.providers.router import select_provider, select_vision_provider
 from scripts.security import redact_secrets
 from scripts.storage import dump_frontmatter, parse_frontmatter, slugify
@@ -31,6 +32,7 @@ from scripts.telegram.jobs import (
     retry_target,
 )
 from scripts.wiki.ingest import IngestResult, ingest_carousel, ingest_file
+from scripts.wiki.lint import format_report, run_lint
 
 log = logging.getLogger("knowledge_wiki.telegram")
 
@@ -63,7 +65,8 @@ Commands:
 /ask <question> - answer from the wiki, with sources
 /compare <question> - compare positions in the wiki
 /summarize <title> - stored summary of a source
-/link, /lint - not available yet
+/lint - check the wiki for broken links, orphans and missing sources
+/link - not available yet
 
 Never send passwords, keys or identity documents. Telegram itself can read what you send."""
 
@@ -90,6 +93,11 @@ class AppState:
     select_text: Callable[..., Any] = select_provider
     select_vision: Callable[..., Any] = select_vision_provider
     classify: Callable[..., intent.Decision] = intent.classify
+    embedder: Callable[[Vault], Any] = lambda v: OllamaEmbedder(  # noqa: E731
+        v.provider.ollama_local_url,
+        v.provider.ollama_local_embed_model,
+        keep_alive=str(v.settings.get("models", {}).get("keep_alive", "30s")),
+    )
 
 
 Handler = Callable[[Update, ContextTypes.DEFAULT_TYPE, AppState], Awaitable[None]]
@@ -562,7 +570,9 @@ async def cmd_search(update: Update, context, state: AppState) -> None:
         await send("Usage: /search <words>")
         return
     limit = int(state.vault.settings.get("telegram", {}).get("search_results", 5))
-    hits = query.search_wiki(state.vault, text, limit)
+    hits = await asyncio.to_thread(
+        query.search_wiki, state.vault, text, limit, state.embedder(state.vault)
+    )
     if not hits:
         await send("No wiki pages match.")
         return
@@ -591,6 +601,7 @@ async def answer_question(
             context.chat_data.get("provider"),
             compare,
             state.select_text,
+            state.embedder(state.vault),
         )
     except CloudBlocked as exc:
         text = f"Blocked: {exc}"
@@ -614,6 +625,12 @@ async def cmd_summarize(update: Update, context, state: AppState) -> None:
     text = " ".join(context.args or []).strip()
     reply = query.summary_of(state.vault, text) if text else "Usage: /summarize <title words>"
     await sender(update, state)(reply)
+
+
+@authorized
+async def cmd_lint(update: Update, context, state: AppState) -> None:
+    report = await asyncio.to_thread(run_lint, state.vault)
+    await sender(update, state)(format_report(report))
 
 
 @authorized

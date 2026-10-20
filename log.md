@@ -116,3 +116,8 @@ This file is append-only.
 - Pages updated: ["index.md"]
 - Contradictions: none recorded
 - Human review: pending
+
+## [2026-10-20 21:50] lint | 50 pages
+
+- Issues: 2
+- By kind: not-indexed: 2

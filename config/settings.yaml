@@ -39,3 +39,7 @@ telegram:
 youtube:
   subtitle_langs: ["en.*", "sl.*", "sr.*"]
   allow_audio_download: false   # set true only for media you may process
+
+search:
+  semantic_weight: 0.5   # 0 = keywords only, 1 = embeddings only
+  min_semantic: 0.45     # cosine similarity needed for a page with no keyword match

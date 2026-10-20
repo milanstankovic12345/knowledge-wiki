@@ -46,6 +46,17 @@ class Job(Base):
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class PageEmbedding(Base):
+    """Cached embedding of one wiki page, keyed by path and invalidated by content hash."""
+
+    __tablename__ = "page_embeddings"
+
+    path: Mapped[str] = mapped_column(String(1024), primary_key=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    model: Mapped[str] = mapped_column(String(128))
+    vector: Mapped[str] = mapped_column(Text)  # JSON list of floats
+
+
 def open_db(db_path: Path) -> Session:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     engine = create_engine(f"sqlite:///{db_path}")
