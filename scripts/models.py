@@ -39,3 +39,5 @@ class SourceDoc(BaseModel):
     content_hash: str
     privacy: str
     body: str
+    page_count: int = 0
+    low_confidence_pages: list[int] = Field(default_factory=list)

@@ -14,7 +14,7 @@ from scripts.wiki.ingest import IngestError, ingest_file
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="scripts.app")
     sub = parser.add_subparsers(dest="command", required=True)
-    ingest = sub.add_parser("ingest", help="ingest one Markdown/text file from raw/")
+    ingest = sub.add_parser("ingest", help="ingest one Markdown/text/PDF file from raw/")
     ingest.add_argument("path")
     args = parser.parse_args(argv)
 
@@ -35,6 +35,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Already ingested. Source summary: {result.summary_path}")
         return 0
     print(f"Ingested. Source summary: {result.summary_path}")
+    if result.book_path:
+        print(f"Book page: {result.book_path}")
+    for note in result.needs_review:
+        print(f"Needs review: {note}")
     print(f"Topics created: {', '.join(result.created) or '-'}")
     print(f"Topics updated: {', '.join(result.updated) or '-'}")
     return 0
