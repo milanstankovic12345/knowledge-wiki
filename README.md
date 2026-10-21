@@ -10,7 +10,7 @@ private data never leaves your machine unless a written policy allows it.**
 
 ---
 
-## 1. For management: what this project demonstrates
+## 1. What this project demonstrates
 
 | Topic | How it is applied here |
 |---|---|
@@ -110,6 +110,7 @@ Start it: `python -m scripts.app bot` (keep the window open; Ollama must be runn
 | `What do I know about agentic RAG?` | Answers from the wiki with sources and uncertainty |
 | `remember: renew the domain in March` | Saves a note and files it into the wiki |
 | `please read https://example.com/post` | Downloads the article and ingests it (a bare URL works too) |
+| A YouTube link (alone or in a sentence) | Fetches the video's subtitles with yt-dlp, stores the timestamped transcript in `raw/youtube/` and ingests it; the reply shows title, channel, length and whether the subtitles were manual or auto-generated |
 | A PDF, document, audio, video, voice note | Saves to `raw/telegram/`, transcribes/extracts, ingests |
 | A photo, or several photos as an album | Describes the images and ingests them as one source |
 | A forwarded message | Saves it as a note with the original author |
@@ -139,6 +140,46 @@ python -m scripts.app ingest "raw/articles/my-article.md"
 For web articles, install **Obsidian Web Clipper**, import `config/web-clipper/article.json`
 (see `config/web-clipper/README.md`), clip into `raw/articles/`, then run the command above.
 Clips are `visibility: private` by default, so they stay local.
+
+**YouTube tutorials** (needs `yt-dlp` on PATH):
+
+```powershell
+python -m scripts.app youtube "https://www.youtube.com/watch?v=<id>"
+```
+
+This stores `raw/youtube/<title>-<id>.md` (subtitles with `<!-- t: MM:SS -->` markers, so the wiki
+can cite `(t. MM:SS)`) and ingests it; running it again reports "Already ingested". Subtitle
+languages come from `youtube.subtitle_langs` in `config/settings.yaml`; manual subtitles are
+preferred over auto-generated ones. Videos without subtitles, private or age-restricted videos fail
+with a clear message (no cookies are used, and audio is not downloaded). YouTube changes often: when
+captures start failing, update the tool with `winget upgrade yt-dlp.yt-dlp`. Playlists are not supported.
+
+**Many sources at once** (`batch`):
+
+```powershell
+# urls.txt: one URL per line (YouTube and articles mixed; blank lines and # comments are ignored)
+python -m scripts.app batch urls.txt
+python -m scripts.app batch raw/articles          # every new file in a raw/ folder (--recursive for subfolders)
+python -m scripts.app batch urls.txt --dry-run    # only list what would be processed
+```
+
+Items run one at a time. One failure never stops the rest; the summary lists the counts, failed
+URLs are saved to `urls.txt.failed.txt` (the original list is untouched), and rerunning is safe
+because already-ingested sources are skipped as duplicates.
+
+**Automatically** (`watch`):
+
+```powershell
+python -m scripts.app watch                       # scan every 30 s (--interval N, --folders articles books)
+```
+
+It ingests new files in `raw/articles/` (for example Web Clipper clips) and URL lists dropped into
+`inbox/pending/*.txt`. A finished list moves to `inbox/processed/`; if some URLs failed, only those
+stay in the list that moves to `inbox/failed/` (move it back to `pending/` to retry). Files still
+being written are skipped, and a file that failed is not retried until you edit it or restart. If
+Ollama is down the scan stops and tries again on the next round. To start it at logon, create a
+Windows Task Scheduler task that runs `.venv\Scripts\python.exe -m scripts.app watch` with the
+vault folder as the start-in directory.
 
 ### 4.3 Read and explore in Obsidian
 
@@ -192,3 +233,18 @@ design; `AGENTS.md` holds the rules the LLM follows.
 - Quality depends on an 8B local model. `/ask` and `/compare` show verified quotes as *Evidence* and a
   *Verification* line. The check is textual: it proves the quote exists in the cited page, not that the
   answer interprets it correctly, so important claims should still be checked against the source.
+
+### Planned: faster, conversational bot (not started)
+
+Problem: the bot is slow and answers each message in isolation. The 8 GB RTX 3050 runs `qwen3:8b`
+with a 4096-token context, a 30 s `keep_alive` and two model calls per question.
+
+- Switch the text model to Qwen3.5-9B, text-only Q4_K_M
+  (`ollama pull hf.co/unsloth/Qwen3.5-9B-GGUF:Q4_K_M`; the official `qwen3.5:9b` tag bundles a
+  ~1.4 GB vision encoder that barely fits on 8 GB). Set `OLLAMA_LOCAL_TEXT_MODEL` in `.env`.
+- Merge the question-or-note classifier and the answer into one model call.
+- Raise `keep_alive` (about 30 m) and the Ollama context (8192), keeping the model fully on the GPU.
+- Keep the last few turns per chat so follow-up questions work, and use them when searching the wiki.
+- Answer in natural language with sources underneath, instead of the fixed Answer / Uncertainty /
+  Evidence template. Decide the reply language (Serbian / English).
+

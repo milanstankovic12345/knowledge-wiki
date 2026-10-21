@@ -7,7 +7,7 @@ from typing import Any
 from scripts.config import Vault
 from scripts.providers.base import CloudBlocked, ProviderUnavailable, TextProvider
 from scripts.providers.ollama_cloud import OllamaCloudProvider
-from scripts.providers.ollama_local import OllamaLocalProvider
+from scripts.providers.ollama_local import DEFAULT_NUM_CTX, OllamaLocalProvider
 from scripts.providers.openai_compatible import OpenAICompatibleProvider
 from scripts.providers.vision import OllamaVisionProvider, VisionProvider
 
@@ -54,10 +54,12 @@ def _cloud_requested(
 
 
 def _local_text(vault: Vault) -> TextProvider:
+    models = vault.settings.get("models", {})
     provider = OllamaLocalProvider(
         vault.provider.ollama_local_url,
         vault.provider.ollama_local_text_model,
-        keep_alive=str(vault.settings.get("models", {}).get("keep_alive", "30s")),
+        keep_alive=str(models.get("keep_alive", "30s")),
+        num_ctx=int(models.get("num_ctx", DEFAULT_NUM_CTX)),
     )
     if not provider.health():
         raise ProviderUnavailable("local Ollama is unavailable or the model is not pulled")

@@ -147,6 +147,39 @@ def test_question_text_is_answered_without_a_command(state, monkeypatch):
     assert msg.replies == ["Answer:\nx"]
 
 
+def test_unexpected_error_while_answering_is_reported_not_swallowed(state, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("secret source text")
+
+    monkeypatch.setattr(h.query, "ask_wiki", boom)
+    msg = FakeMessage("What do I know about spaced repetition?")
+    run(h.on_text(update_for(msg), make_context(state)))
+    assert msg.replies == ["Failed: RuntimeError"]  # type only, never the message
+
+
+def test_classifier_crash_falls_back_to_rules(state, monkeypatch):
+    asked = []
+    monkeypatch.setattr(h.query, "ask_wiki", lambda v, q, *a, **k: asked.append(q) or "A")
+
+    def boom(*a, **k):
+        raise RuntimeError("classifier exploded")
+
+    state.classify = boom
+    msg = FakeMessage("What do I know about spaced repetition?")
+    run(h.on_text(update_for(msg), make_context(state)))
+    assert asked == [msg.text]
+
+
+def test_on_error_tells_the_user_something_failed():
+    from scripts.telegram.bot import on_error
+
+    msg = FakeMessage("hi")
+    ctx = SimpleNamespace(error=RuntimeError("token 123:abc"))
+    run(on_error(update_for(msg), ctx))
+    assert msg.replies == ["Something went wrong (RuntimeError). Check the bot log."]
+    run(on_error(object(), ctx))  # non-Update errors (e.g. polling) must not raise
+
+
 def test_save_prefix_text_is_saved_as_note(state):
     msg = FakeMessage("remember: buy a USB-C hub")
     run(h.on_text(update_for(msg), make_context(state)))
@@ -246,6 +279,95 @@ def test_blocked_url_is_reported_as_rejected(state):
     msg = FakeMessage("http://127.0.0.1:11434/api/tags")
     run(h.on_text(update_for(msg), make_context(state)))
     assert any(r.startswith("Rejected:") for r in msg.replies)
+
+
+YT = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+
+def fake_youtube(seen):
+    def capture_yt(url, vault, privacy=""):
+        seen.append((url, privacy))
+        folder = vault.root / "raw" / "youtube"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / "tutorial-dQw4w9WgXcQ.md"
+        path.write_text(
+            '---\ntitle: "Tutorial"\nsource_type: youtube\n---\n\n<!-- t: 00:00 -->\n\nHello.\n',
+            "utf-8",
+        )
+        return path, h.YoutubeMeta("dQw4w9WgXcQ", "Tutorial", "Some Channel", 600, "en", "manual")
+
+    return capture_yt
+
+
+def forbid_article(state):
+    def capture(*a, **k):
+        raise AssertionError("article capture must not run")
+
+    state.capture = capture
+
+
+@pytest.mark.parametrize("text", [YT, f"watch this {YT} tonight"])
+def test_youtube_link_goes_to_youtube_capture_not_article(state, text):
+    seen = []
+    state.capture_yt = fake_youtube(seen)
+    forbid_article(state)
+    ctx = make_context(state)
+    ctx.chat_data["privacy"] = "personal"
+    msg = FakeMessage(text)
+    run(h.on_text(update_for(msg), ctx))
+    assert seen == [(YT, "personal")]
+    reply = "\n".join(msg.replies)
+    assert "Processing complete" in reply
+    assert "Channel: Some Channel" in reply and "manual subtitles" in reply
+
+
+def test_ingest_command_routes_youtube_link(state):
+    seen = []
+    state.capture_yt = fake_youtube(seen)
+    forbid_article(state)
+    msg = FakeMessage("/ingest")
+    run(h.cmd_ingest(update_for(msg), make_context(state, [YT])))
+    assert [u for u, _ in seen] == [YT]
+
+
+def test_other_urls_still_use_article_capture(state):
+    seen = []
+    state.capture_yt = fake_youtube([])
+
+    def capture(url, vault, privacy=""):
+        seen.append(url)
+        path = vault.root / "raw" / "articles" / "a.md"
+        path.write_text('---\ntitle: "A"\nsource_type: article\n---\n\nBody text here.\n', "utf-8")
+        return path
+
+    state.capture = capture
+    run(h.on_text(update_for(FakeMessage("https://example.com/post")), make_context(state)))
+    assert seen == ["https://example.com/post"]
+
+
+def test_youtube_failure_is_replied_without_details(state):
+    def capture_yt(url, vault, privacy=""):
+        raise ExtractionError("this video has no subtitles in the configured languages")
+
+    state.capture_yt = capture_yt
+    msg = FakeMessage(YT)
+    run(h.on_text(update_for(msg), make_context(state)))
+    assert any(r.startswith("Failed: this video has no subtitles") for r in msg.replies)
+
+
+def test_youtube_playlist_link_is_rejected_not_fetched_as_article(state):
+    forbid_article(state)
+    msg = FakeMessage("https://www.youtube.com/playlist?list=PL12345")
+    run(h.on_text(update_for(msg), make_context(state)))
+    assert any(r.startswith("Rejected:") for r in msg.replies)
+
+
+def test_unauthorized_youtube_link_gets_nothing(state):
+    seen = []
+    state.capture_yt = fake_youtube(seen)
+    msg = FakeMessage(YT)
+    run(h.on_text(update_for(msg, user=STRANGER), make_context(state)))
+    assert msg.replies == [] and seen == []
 
 
 def test_document_is_saved_under_raw_telegram_and_ingested(state):

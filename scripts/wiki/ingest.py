@@ -47,7 +47,12 @@ SYSTEM_PROMPT = (
     "photo set in order; end a claim with (img. 2) when it comes from one image. "
     "Summarise in your own words; never copy long passages."
 )
-FOLDER_TYPES = {"articles": "article", "books": "book", "telegram": "telegram_document"}
+FOLDER_TYPES = {
+    "articles": "article",
+    "books": "book",
+    "telegram": "telegram_document",
+    "youtube": "youtube",
+}
 MEDIA_TYPES = {  # default source type by media kind
     "audio": "telegram_voice",
     "video": "pc_video",
@@ -513,6 +518,8 @@ def _run(
         add_index_entry(index, "Photos", f"sources/{slug}", doc.title)
     elif doc.media_kind:
         add_index_entry(index, "Videos", f"sources/{slug}", f"{doc.title} (audio)")
+    elif doc.source_type == "youtube":
+        add_index_entry(index, "Videos", f"sources/{slug}", doc.title)
     else:
         add_index_entry(index, "Articles", f"sources/{slug}", doc.title)
     by_slug = {slugify(c): c for c in analysis.concepts}

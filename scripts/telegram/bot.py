@@ -28,7 +28,15 @@ class BotConfigError(RuntimeError):
 
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Only the exception type is logged: messages can carry source content or the bot token.
-    log.error("update failed: %s", type(context.error).__name__)
+    name = type(context.error).__name__
+    log.error("update failed: %s", name)
+    # Tell the user instead of leaving them with silence (polling errors have no message).
+    message = getattr(update, "effective_message", None)
+    if message is not None:
+        try:
+            await message.reply_text(f"Something went wrong ({name}). Check the bot log.")
+        except Exception:  # noqa: BLE001 - the error handler must never raise
+            log.error("could not send the error notice")
 
 
 def build_application(vault: Vault) -> Application:

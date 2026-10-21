@@ -18,7 +18,8 @@ allowed_extensions:
   video: [.mp4, .mov, .mkv, .webm, .avi]
 
 models:
-  context_chars: 24000   # chunk size sent to the text model
+  context_chars: 12000   # chunk size sent to the text model; must fit in num_ctx with the output cap
+  num_ctx: 8192          # Ollama context window (tokens) for the local text model
   keep_alive: 30s        # unload quickly on 8 GB VRAM
 
 transcription:

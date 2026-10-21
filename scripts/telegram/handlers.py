@@ -4,6 +4,7 @@ pipeline, and no handler runs shell commands or accepts a path outside `raw/`.""
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 import logging
 import re
@@ -18,6 +19,7 @@ from telegram.ext import ContextTypes
 
 from scripts.config import Vault
 from scripts.extractors.url import capture_article
+from scripts.extractors.youtube import YoutubeMeta, capture_youtube, find_youtube_url
 from scripts.providers.base import CloudBlocked, ProviderUnavailable
 from scripts.providers.embeddings import OllamaEmbedder
 from scripts.providers.router import select_provider, select_vision_provider
@@ -51,6 +53,7 @@ HELP = """Just type, no commands needed:
 
 Send me something to capture it:
 - an article URL (also inside a sentence)
+- a YouTube link: I store the subtitles with timestamps (videos without subtitles fail)
 - a PDF or other document, a voice note, audio, video
 - a photo, or several photos as one album
 - /ingest <text or URL> to save a note
@@ -91,6 +94,7 @@ class AppState:
     ingest: Callable[..., IngestResult] = ingest_file
     ingest_group: Callable[..., IngestResult] = ingest_carousel
     capture: Callable[..., Path] = capture_article
+    capture_yt: Callable[..., tuple[Path, YoutubeMeta]] = capture_youtube
     select_text: Callable[..., Any] = select_provider
     select_vision: Callable[..., Any] = select_vision_provider
     classify: Callable[..., intent.Decision] = intent.classify
@@ -132,6 +136,13 @@ def sender(update: Update, state: AppState) -> Callable[[str], Awaitable[Any]]:
         return await message.reply_text(clip(state.vault, text))
 
     return send
+
+
+async def show_typing(update: Update) -> None:
+    """Show "typing..." so a slow local model start is not mistaken for silence."""
+    chat = update.effective_chat
+    with contextlib.suppress(Exception):  # cosmetic only
+        await chat.send_action("typing")
 
 
 def chat_provider(context: ContextTypes.DEFAULT_TYPE, state: AppState) -> str:
@@ -224,6 +235,48 @@ async def capture_url(update: Update, context, state: AppState, url: str) -> Non
     )
 
 
+def format_youtube(meta: YoutubeMeta, result: IngestResult) -> str:
+    minutes = meta.duration_seconds // 60
+    lines = [
+        f"Video: {meta.title}",
+        f"Channel: {meta.channel or 'unknown'}",
+        f"Length: {minutes} min",
+        f"Transcript: {meta.transcript_kind} subtitles ({meta.language})",
+    ]
+    if result.created:
+        lines.append("New topics: " + ", ".join(result.created[:10]))
+    return "\n".join(lines)
+
+
+async def capture_youtube_url(update: Update, context, state: AppState, url: str) -> None:
+    privacy = context.chat_data.get("privacy", "")
+    kw = factories(context, state)
+    metas: list[YoutubeMeta] = []
+
+    def work(on_job):
+        path, meta = state.capture_yt(url, state.vault, privacy=privacy)
+        metas.append(meta)
+        return state.ingest(state.vault, path, on_job=on_job, **kw)
+
+    await state.runner.run(
+        sender(update, state),
+        url,
+        "youtube",
+        "youtube",
+        chat_provider(context, state),
+        work,
+        extra=lambda result: format_youtube(metas[0], result) if metas else "",
+    )
+
+
+async def capture_any_url(update: Update, context, state: AppState, url: str) -> None:
+    """YouTube links carry speech and get the transcript path; everything else is an article."""
+    if yt_url := find_youtube_url(url):
+        await capture_youtube_url(update, context, state, yt_url)
+    else:
+        await capture_url(update, context, state, url)
+
+
 async def capture_note(update: Update, context, state: AppState, text: str) -> None:
     author = forward_author(update.effective_message)
     path = save_note(state.vault, text, author, context.chat_data.get("privacy", ""))
@@ -245,15 +298,22 @@ async def on_text(update: Update, context, state: AppState) -> None:
     if not text:
         return
     if URL_ONLY.fullmatch(text):
-        await capture_url(update, context, state, text)
+        await capture_any_url(update, context, state, text)
     elif getattr(message, "forward_origin", None):
         await capture_note(update, context, state, text)
+    elif yt_url := find_youtube_url(text):
+        await capture_youtube_url(update, context, state, yt_url)
     elif found := URL_IN_TEXT.search(text):
         await capture_url(update, context, state, found.group(0))
     elif intent.is_greeting(text):
         await sender(update, state)(HELP)
     else:
-        decision = await asyncio.to_thread(state.classify, state.vault, text, state.select_text)
+        await show_typing(update)
+        try:
+            decision = await asyncio.to_thread(state.classify, state.vault, text, state.select_text)
+        except Exception as exc:  # noqa: BLE001 - never leave the user without a reply
+            log.error("classify failed: %s", type(exc).__name__)
+            decision = intent.heuristic(text)
         if decision.label == "question":
             await answer_question(update, context, state, decision.text, compare=False)
         elif decision.label == "note":
@@ -308,7 +368,7 @@ async def cmd_ingest(update: Update, context, state: AppState) -> None:
     if not text:
         await sender(update, state)("Usage: /ingest <text or URL>")
     elif URL_ONLY.fullmatch(text):
-        await capture_url(update, context, state, text)
+        await capture_any_url(update, context, state, text)
     else:
         await capture_note(update, context, state, text)
 
@@ -595,6 +655,7 @@ async def answer_question(
     update: Update, context, state: AppState, question: str, compare: bool
 ) -> None:
     send = sender(update, state)
+    await show_typing(update)
     try:
         text = await asyncio.to_thread(
             query.ask_wiki,
@@ -609,6 +670,9 @@ async def answer_question(
         text = f"Blocked: {exc}"
     except ProviderUnavailable as exc:
         text = f"Failed: {exc}"
+    except Exception as exc:  # noqa: BLE001 - type only: the message may carry wiki content
+        log.error("answer failed: %s", type(exc).__name__)
+        text = f"Failed: {type(exc).__name__}"
     await send(text)
 
 

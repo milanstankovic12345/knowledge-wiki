@@ -2,127 +2,108 @@
 
 This file is append-only.
 
-## [2026-10-19 23:36] ingest | Why Personal Knowledge Management Compounds
-
-
-- Source type: article
-- Raw path: raw/articles/sample-knowledge-management.md
-- Content hash: aecb27cec015ea200883058fade2fa5ad5282d25ca8c8b2411875c1c1deac3ec
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/why-personal-knowledge-management-compounds.md", "wiki/topics/personal-knowledge-management.md", "wiki/topics/note-taking-system.md", "wiki/topics/spaced-repetition.md", "wiki/topics/linked-notes.md", "wiki/topics/wiki-maintenance.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 09:59] ingest | Android Programming Cookbook
-
-- Source type: book
-- Raw path: raw/books/Android-Programming-Cookbook.pdf
-- Content hash: d10be3fc6431257d4f4b578e880e4cd03194890d3efb37b0120706645f4b297f
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/android-programming-cookbook.md", "wiki/books/android-programming-cookbook.md", "wiki/topics/android-operating-system.md", "wiki/topics/android-studio-ide.md", "wiki/topics/software-development-kit-sdk.md", "wiki/topics/android-virtual-devices-avd.md", "wiki/topics/android-versions-and-compatibility.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 10:39] ingest | voice-sample-password-generator
-
-- Source type: telegram_voice
-- Raw path: raw/telegram/voice-sample-password-generator.m4a
-- Content hash: d68dc834e15b3c729558302ef68c66f02147f4b33258ff09fa5adcadb2854e73
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/voice-sample-password-generator.md", "wiki/topics/python-course.md", "wiki/topics/password-generator.md", "wiki/topics/password-manager.md", "wiki/topics/minimum-password-length.md", "wiki/topics/special-characters.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 11:08] ingest | 01 - Mini Python Project Tutorial - Password Generator
-
-- Source type: pc_video
-- Raw path: raw/videos/01 - Mini Python Project Tutorial - Password Generator.mp4
-- Content hash: 6e08882b9d03bc4cf47a1f62f730271d3cfccab37e9c155d0c0149172c687781
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/01-mini-python-project-tutorial-password-generator.md", "wiki/videos/01-mini-python-project-tutorial-password-generator.md", "wiki/topics/password-generation.md", "wiki/topics/user-input-handling.md", "wiki/topics/random-password-creation.md", "wiki/topics/string-manipulation.md", "wiki/topics/python-function-definition.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 12:17] ingest | Building RAG Systems: From Zero to Hero
-
-- Source type: article
-- Raw path: raw/articles/Building RAG Systems From Zero to Hero.md
-- Content hash: a8fc1cb7328c160be35830d0596b84d65a3fbe019e37551a6721b4cbc142c1c9
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/building-rag-systems-from-zero-to-hero.md", "wiki/topics/retrieval-augmented-generation-rag.md", "wiki/topics/fine-tuning.md", "wiki/topics/agentic-rag.md", "wiki/topics/context-overflow.md", "wiki/topics/cost-optimization.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 13:12] ingest | An App Built for One: Why a Devpost Skill Pack Made Me Spec It Anyway
-
-- Source type: article
-- Raw path: raw/articles/An App Built for One Why a Devpost Skill Pack Made Me Spec It Anyway.md
-- Content hash: c7bb2122719e54341b70e4437f0af51b5881353c55131286983b3b490071b0cf
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/an-app-built-for-one-why-a-devpost-skill-pack-made-me-spec-i.md", "wiki/topics/spec-discipline.md", "wiki/topics/early-testing.md", "wiki/topics/iterative-development.md", "wiki/topics/custom-builds.md", "wiki/topics/scalable-tools.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 13:25] ingest | Building RAG Systems: From Zero to Hero
-
-- Source type: article
-- Raw path: raw/articles/Building RAG Systems From Zero to Hero 1.md
-- Content hash: 8ca97217233b56639987d7b30c8c5a3560eeb3e535ef2e8b7145e820901f90f0
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/building-rag-systems-from-zero-to-hero-8ca97217.md", "wiki/topics/user-centric-design.md", "wiki/topics/user-feedback.md", "wiki/topics/continuous-improvement.md", "wiki/topics/customization-vs-scalability.md"]
-- Pages updated: ["wiki/topics/iterative-development.md", "index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 13:59] ingest | Running n8n for Free on AWS: A Self-Hosting Guide for n8n Lovers.
-
-- Source type: article
-- Raw path: raw/articles/Running n8n for Free on AWS A Self-Hosting Guide for n8n Lovers..md
-- Content hash: bf3171bdf725f3dde0ce9747c01780c38c30b195d657366b10cbc4efc66f20af
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/running-n8n-for-free-on-aws-a-self-hosting-guide-for-n8n-lov.md", "wiki/topics/docker-compose.md", "wiki/topics/nginx-reverse-proxy.md", "wiki/topics/let-s-encrypt-ssl.md", "wiki/topics/oauth-authentication.md", "wiki/topics/containerization.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 14:10] correction | removed garbled source 8ca97217
-
-- Reason: clip "Building RAG Systems From Zero to Hero 1.md" carried a Devpost URL and a malformed creator, and its raw file no longer exists. Its source page, processed document, four topic pages and index entries were removed; the 13:25 ingest entry above is retained as history.
-- Pages updated: ["wiki/topics/iterative-development.md", "index.md"]
-- Human review: approved
-
-## [2026-10-20 17:52] ingest | I made Claude Code build a map of my files, and it cut search times by 96%
-
-- Source type: article
-- Raw path: raw/articles/i-made-claude-code-build-a-map-of-my-files-and-it-cut-search-4608af51.md
-- Content hash: abf4d3fc1cf883f29b2b6be0d226a235a61939f70691968743c3837e78c94daa
-- Provider: ollama-local
-- Model: qwen3:8b
-- Pages created: ["wiki/sources/i-made-claude-code-build-a-map-of-my-files-and-it-cut-search.md", "wiki/topics/digital-organization.md", "wiki/topics/file-search-efficiency.md", "wiki/topics/readme-files.md", "wiki/topics/personal-knowledge-base.md", "wiki/topics/claude-code.md"]
-- Pages updated: ["index.md"]
-- Contradictions: none recorded
-- Human review: pending
-
-## [2026-10-20 21:50] lint | 50 pages
-
-- Issues: 2
-- By kind: not-indexed: 2
-
-## [2026-10-20 22:47] lint | 50 pages
+## [2026-10-21 21:25] lint | 0 pages
 
 - Issues: 0
 - By kind: none
+
+## [2026-10-21 21:52] lint | 0 pages
+
+- Issues: 0
+- By kind: none
+
+## [2026-10-21 22:22] ingest | Reverse Engineer Anything (REA): Can AI Really Crack Closed Code?
+
+- Source type: article
+- Raw path: raw/articles/reverse-engineer-anything-rea-can-ai-really-crack-closed-cod-bbad2ccb.md
+- Content hash: 1f28bf5b392d7c6a18c22c24aa62a4ef08d494de1de07cdd3f1f8e1d3d8901bc
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/reverse-engineer-anything-rea-can-ai-really-crack-closed-cod.md", "wiki/topics/reverse-engineer-anything-rea.md", "wiki/topics/mcp-server.md", "wiki/topics/ai-coding-agents.md", "wiki/topics/obsidian-quick-switcher.md", "wiki/topics/fuzzy-filename-matches.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-21 22:23] ingest | How To Reverse Engineer Any Software in Minutes
+
+- Source type: youtube
+- Raw path: raw/youtube/how-to-reverse-engineer-any-software-in-minutes-HLsMMsvPDLY.md
+- Content hash: 2a209a3db399b77baf2a8c456836b90360feb80243fa6dfd6de61a009d16c0b7
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/how-to-reverse-engineer-any-software-in-minutes.md", "wiki/topics/reverse-engineering.md", "wiki/topics/ria.md", "wiki/topics/decompiling.md", "wiki/topics/ai.md", "wiki/topics/cloning-apps.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-21 22:24] ingest | What Are Large Language Models (LLMs)? | IBM
+
+- Source type: article
+- Raw path: raw/articles/what-are-large-language-models-llms-ibm-85e59aa9.md
+- Content hash: 2af42b6eacf2d7fde4b7a0c8d5691e95ac56e4fd1317494f6a58ec536f899d5c
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/what-are-large-language-models-llms-ibm.md", "wiki/topics/large-language-models.md", "wiki/topics/transformer-architecture.md", "wiki/topics/self-supervised-learning.md", "wiki/topics/tokenization.md", "wiki/topics/self-attention-mechanism.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-21 22:24] ingest | LLM Wiki + OKF Every Local AI Now Shares ONE Memory
+
+- Source type: youtube
+- Raw path: raw/youtube/llm-wiki-okf-every-local-ai-now-shares-one-memory-9ciGYHHOLyU.md
+- Content hash: 15d8f79032cb58809220cbe1f1a7ab56e8277ec0adc7df88491fc20ee43b2eec
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/llm-wiki-okf-every-local-ai-now-shares-one-memory.md", "wiki/topics/local-ai.md", "wiki/topics/memory-system.md", "wiki/topics/rag.md", "wiki/topics/llm-wiki.md", "wiki/topics/okf-spec.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-21 22:45] ingest | A Practical Guide to Harness Engineering: Building the System Around the Model
+
+- Source type: article
+- Raw path: raw/articles/A Practical Guide to Harness Engineering Building the System Around the Model.md
+- Content hash: 414fa82bdf882832228fbad0713f9137ff3c1d48f8609d82b53b78b063f93910
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/a-practical-guide-to-harness-engineering-building-the-system.md", "wiki/topics/harness-engineering.md", "wiki/topics/agent-harness.md", "wiki/topics/prompt-engineering.md", "wiki/topics/context-engineering.md", "wiki/topics/six-layers-of-a-harness.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-21 22:45] ingest | Every Local AI I Run Now Shares ONE Memory | (LLM Wiki + OKF)
+
+- Source type: article
+- Raw path: raw/articles/Every Local AI I Run Now Shares ONE Memory  (LLM Wiki + OKF) 1.md
+- Content hash: 10b618689f3227e8ad59a8a840df91c27908435c0c917519ea4c1a0ce36a9ff5
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/every-local-ai-i-run-now-shares-one-memory-llm-wiki-okf.md", "wiki/topics/shared-memory.md", "wiki/topics/librarian-agent.md", "wiki/topics/okf-format.md", "wiki/topics/cold-start-problem.md"]
+- Pages updated: ["wiki/topics/llm-wiki.md", "index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-21 22:46] ingest | Every Local AI I Run Now Shares ONE Memory | (LLM Wiki + OKF)
+
+- Source type: article
+- Raw path: raw/articles/Every Local AI I Run Now Shares ONE Memory  (LLM Wiki + OKF).md
+- Content hash: 46179e4f542dfc5d3702220cbd0838faa60e431f7ebf3c0024e61838555a98be
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/every-local-ai-i-run-now-shares-one-memory-llm-wiki-okf-46179e4f.md", "wiki/topics/shared-memory-for-ai-agents.md", "wiki/topics/markdown-files-as-memory.md", "wiki/topics/mcp-protocol.md", "wiki/topics/llm-wiki-idea.md"]
+- Pages updated: ["wiki/topics/librarian-agent.md", "index.md"]
+- Contradictions: none recorded
+- Human review: pending
+
+## [2026-10-21 22:46] ingest | Google's OKF - The New Way to Structure Your Knowledge for Agents
+
+- Source type: article
+- Raw path: raw/articles/Google's OKF - The New Way to Structure Your Knowledge for Agents.md
+- Content hash: 548dad20315c390445427ab2f32c1b770739e7215ec4f1753fde9bd756d5f1d2
+- Provider: ollama-local
+- Model: qwen3:8b
+- Pages created: ["wiki/sources/google-s-okf-the-new-way-to-structure-your-knowledge-for-age.md", "wiki/topics/open-knowledge-format-okf.md", "wiki/topics/markdown-files.md", "wiki/topics/yaml-front-matter.md", "wiki/topics/knowledge-bundles.md", "wiki/topics/concepts.md"]
+- Pages updated: ["index.md"]
+- Contradictions: none recorded
+- Human review: pending

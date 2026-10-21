@@ -2,46 +2,44 @@
 
 ## Topics
 
-- [[topics/personal-knowledge-management]] - Personal knowledge management
-- [[topics/note-taking-system]] - Note-taking system
-- [[topics/spaced-repetition]] - Spaced repetition
-- [[topics/linked-notes]] - Linked notes
-- [[topics/wiki-maintenance]] - Wiki maintenance
-- [[topics/android-operating-system]] - Android operating system
-- [[topics/android-studio-ide]] - Android Studio IDE
-- [[topics/software-development-kit-sdk]] - Software Development Kit (SDK)
-- [[topics/android-virtual-devices-avd]] - Android Virtual Devices (AVD)
-- [[topics/android-versions-and-compatibility]] - Android versions and compatibility
-- [[topics/python-course]] - Python course
-- [[topics/password-generator]] - Password generator
-- [[topics/password-manager]] - Password manager
-- [[topics/minimum-password-length]] - Minimum password length
-- [[topics/special-characters]] - Special characters
-- [[topics/password-generation]] - Password generation
-- [[topics/user-input-handling]] - User input handling
-- [[topics/random-password-creation]] - Random password creation
-- [[topics/string-manipulation]] - String manipulation
-- [[topics/python-function-definition]] - Python function definition
-- [[topics/retrieval-augmented-generation-rag]] - Retrieval-Augmented Generation (RAG)
-- [[topics/fine-tuning]] - Fine-tuning
-- [[topics/agentic-rag]] - Agentic RAG
-- [[topics/context-overflow]] - Context overflow
-- [[topics/cost-optimization]] - Cost optimization
-- [[topics/spec-discipline]] - Spec discipline
-- [[topics/early-testing]] - Early testing
-- [[topics/iterative-development]] - Iterative development
-- [[topics/custom-builds]] - Custom builds
-- [[topics/scalable-tools]] - Scalable tools
-- [[topics/docker-compose]] - Docker Compose
-- [[topics/nginx-reverse-proxy]] - NGINX reverse proxy
-- [[topics/let-s-encrypt-ssl]] - Let's Encrypt SSL
-- [[topics/oauth-authentication]] - OAuth authentication
-- [[topics/containerization]] - Containerization
-- [[topics/digital-organization]] - Digital organization
-- [[topics/file-search-efficiency]] - File search efficiency
-- [[topics/readme-files]] - README files
-- [[topics/personal-knowledge-base]] - Personal knowledge base
-- [[topics/claude-code]] - Claude Code
+- [[topics/reverse-engineer-anything-rea]] - Reverse Engineer Anything (REA)
+- [[topics/mcp-server]] - MCP server
+- [[topics/ai-coding-agents]] - AI coding agents
+- [[topics/obsidian-quick-switcher]] - Obsidian quick-switcher
+- [[topics/fuzzy-filename-matches]] - Fuzzy filename matches
+- [[topics/reverse-engineering]] - Reverse engineering
+- [[topics/ria]] - Ria
+- [[topics/decompiling]] - Decompiling
+- [[topics/ai]] - AI
+- [[topics/cloning-apps]] - Cloning apps
+- [[topics/large-language-models]] - Large Language Models
+- [[topics/transformer-architecture]] - Transformer Architecture
+- [[topics/self-supervised-learning]] - Self-supervised learning
+- [[topics/tokenization]] - Tokenization
+- [[topics/self-attention-mechanism]] - Self-attention mechanism
+- [[topics/local-ai]] - Local AI
+- [[topics/memory-system]] - Memory system
+- [[topics/rag]] - RAG
+- [[topics/llm-wiki]] - LLM Wiki
+- [[topics/okf-spec]] - OKF spec
+- [[topics/harness-engineering]] - Harness engineering
+- [[topics/agent-harness]] - Agent harness
+- [[topics/prompt-engineering]] - Prompt engineering
+- [[topics/context-engineering]] - Context engineering
+- [[topics/six-layers-of-a-harness]] - Six layers of a harness
+- [[topics/shared-memory]] - Shared memory
+- [[topics/librarian-agent]] - Librarian agent
+- [[topics/okf-format]] - OKF format
+- [[topics/cold-start-problem]] - Cold-start problem
+- [[topics/shared-memory-for-ai-agents]] - Shared memory for AI agents
+- [[topics/markdown-files-as-memory]] - Markdown files as memory
+- [[topics/mcp-protocol]] - MCP protocol
+- [[topics/llm-wiki-idea]] - LLM-wiki idea
+- [[topics/open-knowledge-format-okf]] - Open Knowledge Format (OKF)
+- [[topics/markdown-files]] - Markdown files
+- [[topics/yaml-front-matter]] - YAML front matter
+- [[topics/knowledge-bundles]] - Knowledge bundles
+- [[topics/concepts]] - Concepts
 
 ## People
 
@@ -49,22 +47,21 @@
 
 ## Books
 
-- [[books/android-programming-cookbook]] - Android Programming Cookbook
-
 ## Videos
 
-- [[sources/voice-sample-password-generator]] - voice-sample-password-generator (audio)
-- [[videos/01-mini-python-project-tutorial-password-generator]] - 01 - Mini Python Project Tutorial - Password Generator
+- [[sources/how-to-reverse-engineer-any-software-in-minutes]] - How To Reverse Engineer Any Software in Minutes
+- [[sources/llm-wiki-okf-every-local-ai-now-shares-one-memory]] - LLM Wiki + OKF Every Local AI Now Shares ONE Memory
 
 ## Photos
 
 ## Articles
 
-- [[sources/why-personal-knowledge-management-compounds]] - Why Personal Knowledge Management Compounds
-- [[sources/building-rag-systems-from-zero-to-hero]] - Building RAG Systems: From Zero to Hero
-- [[sources/an-app-built-for-one-why-a-devpost-skill-pack-made-me-spec-i]] - An App Built for One: Why a Devpost Skill Pack Made Me Spec It Anyway
-- [[sources/running-n8n-for-free-on-aws-a-self-hosting-guide-for-n8n-lov]] - Running n8n for Free on AWS: A Self-Hosting Guide for n8n Lovers.
-- [[sources/i-made-claude-code-build-a-map-of-my-files-and-it-cut-search]] - I made Claude Code build a map of my files, and it cut search times by 96%
+- [[sources/reverse-engineer-anything-rea-can-ai-really-crack-closed-cod]] - Reverse Engineer Anything (REA): Can AI Really Crack Closed Code?
+- [[sources/what-are-large-language-models-llms-ibm]] - What Are Large Language Models (LLMs)? | IBM
+- [[sources/a-practical-guide-to-harness-engineering-building-the-system]] - A Practical Guide to Harness Engineering: Building the System Around the Model
+- [[sources/every-local-ai-i-run-now-shares-one-memory-llm-wiki-okf]] - Every Local AI I Run Now Shares ONE Memory | (LLM Wiki + OKF)
+- [[sources/every-local-ai-i-run-now-shares-one-memory-llm-wiki-okf-46179e4f]] - Every Local AI I Run Now Shares ONE Memory | (LLM Wiki + OKF)
+- [[sources/google-s-okf-the-new-way-to-structure-your-knowledge-for-age]] - Google's OKF - The New Way to Structure Your Knowledge for Agents
 
 ## Concepts
 
@@ -76,8 +73,8 @@
 
 ## Wiki health
 
-- Last ingest: 2026-10-20T17:52:05+02:00
-- Last lint: 2026-10-20T22:47:22+02:00 (0 issues)
+- Last ingest: 2026-10-21T22:46:59+02:00
+- Last lint: 2026-10-21T21:52:14+02:00 (0 issues)
 - Sources awaiting processing:
 - Failed sources:
 - Orphan pages:
